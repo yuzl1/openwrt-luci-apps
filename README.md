@@ -33,7 +33,23 @@ opkg install tailscale ip-full
 opkg install luci-app-tailscale-community_1.0.0-1_all.ipk
 ```
 
-Then open `http://<router>/cgi-bin/luci/admin/vpn/tailscale`.
+Then open `http://<router>/cgi-bin/luci/admin/services/tailscale`.
+
+### Install straight from the opkg feed
+
+Every build publishes `Packages.gz` and the ipk to the `gh-pages` branch, so
+the repository can be used as a normal package feed:
+
+```sh
+echo 'src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05' \
+	>> /etc/opkg/customfeeds.conf
+opkg update
+opkg install luci-app-tailscale-community
+```
+
+The package depends on `tailscale`, `ip-full`, `luci-base`, `rpcd-mod-ucode`
+and the ucode modules, so opkg pulls those in automatically. Afterwards the
+app shows up in *LuCI -> Services -> Tailscale*.
 
 ## Building the package without the SDK
 

@@ -20,14 +20,27 @@ jobs:
         run: |
           chmod +x build-ipk.sh
           ./build-ipk.sh
+          python3 build-index.py dist
           ls -l dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-tailscale-community-ipk
-          path: dist/*.ipk
+          path: |
+            dist/*.ipk
+            dist/Packages
+            dist/Packages.gz
           if-no-files-found: error
+
+      - name: Publish opkg feed to gh-pages
+        if: github.event_name != 'pull_request'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          force_orphan: true
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
