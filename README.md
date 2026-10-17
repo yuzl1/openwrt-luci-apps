@@ -38,11 +38,16 @@ Then open `http://<router>/cgi-bin/luci/admin/services/tailscale`.
 ### Install straight from the opkg feed
 
 Every build publishes `Packages.gz` and the ipk to the `gh-pages` branch, so
-the repository can be used as a normal package feed:
+the repository can be used as a normal package feed. See
+[docs/opkg-feed.md](docs/opkg-feed.md) for the step by step instructions
+(the whole setup can be done from the LuCI web interface).
+
+Short version:
 
 ```sh
 echo 'src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05' \
 	>> /etc/opkg/customfeeds.conf
+sed -i 's/^option check_signature/# option check_signature/' /etc/opkg.conf
 opkg update
 opkg install luci-app-tailscale-community
 ```
