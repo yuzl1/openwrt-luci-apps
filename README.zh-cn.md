@@ -39,7 +39,7 @@ http://<路由器IP>/cgi-bin/luci/admin/services/tailscale
 
 ```sh
 opkg update
-opkg install /tmp/luci-app-tailscale-community_1.0.0-1_all.ipk
+opkg install /tmp/luci-app-tailscale-community_1.0.1-1_all.ipk
 ```
 
 缺 `tailscale`、`ip-full` 等依赖时会自动从源里装。
@@ -71,6 +71,21 @@ opkg install luci-app-tailscale-community
 ```
 
 装好后在 **服务 → Tailscale** 就能看到页面。
+
+## 修改 Tailscale 监听端口
+
+**常规设置** 标签里新增了 **Listen Port** 一项（UDP，默认 `41641`）。
+保存后写入 `tailscale.settings.port`，如果和当前运行的端口不同会自动重启服务。
+
+命令行等价写法：
+
+```sh
+uci set tailscale.settings.port='41642'
+uci commit tailscale
+/etc/init.d/tailscale restart
+```
+
+验证：`netstat -lnup | grep tailscaled`
 
 ## 源签名与公钥安装
 

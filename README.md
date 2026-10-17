@@ -32,7 +32,7 @@ prebuilt architecture independent package:
 
 ```sh
 opkg install tailscale ip-full
-opkg install luci-app-tailscale-community_1.0.0-1_all.ipk
+opkg install luci-app-tailscale-community_1.0.1-1_all.ipk
 ```
 
 Then open `http://<router>/cgi-bin/luci/admin/services/tailscale`.
@@ -57,6 +57,22 @@ opkg install luci-app-tailscale-community
 The package depends on `tailscale`, `ip-full`, `luci-base`, `rpcd-mod-ucode`
 and the ucode modules, so opkg pulls those in automatically. Afterwards the
 app shows up in *LuCI -> Services -> Tailscale*.
+
+## Changing the Tailscale listen port
+
+The *General Settings* tab has a **Listen Port** field (UDP, default
+`41641`). Saving it writes `tailscale.settings.port` and restarts the
+service when the value differs from the running one.
+
+The same from the command line:
+
+```sh
+uci set tailscale.settings.port='41642'
+uci commit tailscale
+/etc/init.d/tailscale restart
+```
+
+Verify with `netstat -lnup | grep tailscaled`.
 
 ## Feed signing - install the public key
 

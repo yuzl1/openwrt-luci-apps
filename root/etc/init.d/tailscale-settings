@@ -220,7 +220,24 @@ handle_service_state() {
 		logger -t "$NAME" "Service is enabled, ensuring tailscale is running"
 		/etc/init.d/tailscale enable 2>/dev/null
 		/etc/init.d/tailscale start 2>/dev/null
+		restart_if_port_changed
 		apply_settings
+	fi
+}
+
+# The UDP listen port is a tailscaled command line option, so changing it
+# requires a service restart instead of a "tailscale set" call.
+restart_if_port_changed() {
+	config_load tailscale
+	local want running
+	config_get want settings port '41641'
+	[ -n "$want" ] || want=41641
+	running=$(ps w 2>/dev/null | grep '[t]ailscaled' \
+		| sed -n 's/.*--port \([0-9][0-9]*\).*/\1/p' | head -n 1)
+	[ -n "$running" ] || return 0
+	if [ "$want" != "$running" ]; then
+		logger -t "$NAME" "Listen port changed ($running -> $want), restarting tailscale"
+		/etc/init.d/tailscale restart
 	fi
 }
 

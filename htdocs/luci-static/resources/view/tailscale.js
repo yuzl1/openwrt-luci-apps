@@ -395,6 +395,13 @@ return view.extend({
 
 		defTabOpts(s, 'general', tailscaleSettingsConf, { optional: false });
 
+		const listenPort = s.taboption('general', form.Value, 'port', _('Listen Port'),
+			_('UDP port tailscaled listens on for peer traffic. Default is 41641. Changing it restarts the Tailscale service.')
+		);
+		listenPort.datatype = 'port';
+		listenPort.placeholder = '41641';
+		listenPort.rmempty = true;
+
 		const relayPort = s.taboption('general', form.Value, 'relay_server_port', _('Peer Relay Port'),
 			_('UDP port for the Peer Relay service. Open this port on your router firewall/NAT.')
 		);

@@ -9,7 +9,7 @@
 set -eu
 
 PKG=luci-app-tailscale-community
-VER=1.0.0-1
+VER=1.0.1-1
 HERE=$(cd "$(dirname "$0")" && pwd)
 OUT=$HERE/dist
 
