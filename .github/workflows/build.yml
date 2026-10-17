@@ -33,12 +33,18 @@ jobs:
             dist/Packages.gz
           if-no-files-found: error
 
+      - name: Prepare feed directory
+        run: |
+          mkdir -p publish
+          cp dist/*.ipk dist/Packages dist/Packages.gz publish/
+          ls -l publish
+
       - name: Publish opkg feed to gh-pages
         if: github.event_name != 'pull_request'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./publish
           publish_branch: gh-pages
           force_orphan: true
 
