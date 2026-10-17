@@ -6,6 +6,16 @@
 'require uci';
 'require tools.widgets as widgets';
 
+/*
+ * Compatibility shim: ui.addTimeLimitedNotification() only exists in newer
+ * LuCI releases. Without it every notification call throws and the page
+ * stops responding to clicks, which is what happens on OpenWrt 23.05.
+ */
+if (typeof ui.addTimeLimitedNotification !== 'function')
+	ui.addTimeLimitedNotification = function(title, content, timeout, type) {
+		return ui.addNotification(title, content, type || 'info');
+	};
+
 const callGetStatus = rpc.declare({ object: 'tailscale', method: 'get_status' });
 const callGetSettings = rpc.declare({ object: 'tailscale', method: 'get_settings' });
 const callDoLogin = rpc.declare({ object: 'tailscale', method: 'do_login', params: ['form_data'] });
