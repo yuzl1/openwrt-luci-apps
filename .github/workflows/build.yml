@@ -60,7 +60,9 @@ jobs:
           printf '%s\n' "$USIGN_SECRET" > /tmp/feed.sec
           usign -S -m publish/Packages -s /tmp/feed.sec -x publish/Packages.sig
           rm -f /tmp/feed.sec
-          usign -F -p keys/776cc6b50a033ebf.pub
+          for key in keys/*.pub; do
+            echo "signing key: $(usign -F -p "$key") ($key)"
+          done
           ls -l publish
 
       - name: Publish opkg feed to gh-pages
