@@ -1,5 +1,7 @@
 # luci-app-tailscale-community for OpenWrt / ImmortalWrt 23.05
 
+English | [简体中文](README.zh-cn.md)
+
 Backport of the OpenWrt `luci-app-tailscale-community` LuCI application so it
 can be installed from opkg on 23.05 based firmware, including arm 32-bit
 targets such as the Redmi AX3000 (RA81).
