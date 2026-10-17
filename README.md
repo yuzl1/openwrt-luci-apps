@@ -56,6 +56,47 @@ The package depends on `tailscale`, `ip-full`, `luci-base`, `rpcd-mod-ucode`
 and the ucode modules, so opkg pulls those in automatically. Afterwards the
 app shows up in *LuCI -> Services -> Tailscale*.
 
+## Feed signing - install the public key
+
+The `Packages` index is signed with usign, so the default OpenWrt behaviour
+(`option check_signature` enabled) can stay on. The public key is **not**
+secret and is shipped in this repository:
+[`keys/776cc6b50a033ebf.pub`](keys/776cc6b50a033ebf.pub).
+
+The key id is `776cc6b50a033ebf`, which is also the file name it must use
+inside `/etc/opkg/keys/`.
+
+### From your computer
+
+```sh
+scp -O keys/776cc6b50a033ebf.pub \
+	root@192.168.1.1:/etc/opkg/keys/776cc6b50a033ebf
+```
+
+### Directly on the router
+
+```sh
+mkdir -p /etc/opkg/keys
+cat > /etc/opkg/keys/776cc6b50a033ebf <<'EOF'
+untrusted comment: yuzl1 luci-app-tailscale-23.05 feed
+RWR3bMa1CgM+v2US9cs2lxNpCg9n+FDyBwZvTU/cm+CvZ3mfutaY9Rt+
+EOF
+```
+
+### Verify
+
+```sh
+usign -F -p /etc/opkg/keys/776cc6b50a033ebf
+# prints: 776cc6b50a033ebf
+```
+
+Once the key is in place, keep `option check_signature` enabled in
+`/etc/opkg.conf` and `opkg update` will verify `Packages.sig`.
+
+The matching **private** key is only used by the CI (repository secret
+`USIGN_SECRET`). Keep a backup of it somewhere safe: it is needed to sign
+future builds, and it must never be committed or shipped.
+
 ## Building the package without the SDK
 
 ```sh
