@@ -19,10 +19,67 @@ src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05
 
 4. 先不要关窗口，继续下一步
 
-## 2. 允许未签名的源
+## 2. 配置签名（推荐）
 
-OpenWrt 默认要求每个源都带 `Packages.sig` 签名文件，自建源没有签名，所以
-`opkg update` 会报：
+OpenWrt 的 opkg 默认要求每个源都有 `Packages.sig` 签名文件。本仓库现在支持
+用 usign 给索引签名，签名校验可以保持开启。
+
+### 2.1 在仓库里配置签名私钥
+
+1. 打开 <https://github.com/yuzl1/luci-app-tailscale-23.05/settings/secrets/actions>
+2. **New repository secret**
+3. Name 填 `USIGN_SECRET`，Secret 粘贴仓库维护者手里的签名私钥（以
+   `untrusted comment:` 开头、包含 `RWRC...` 那一行，共两行）
+4. 保存
+
+有了这个 secret，之后每次构建都会生成 `Packages.sig` 并一起发布。
+
+> 私钥只用于给这个 feed 签名，**不要提交到仓库**，也不要公开。泄露的后果是
+> 别人可以伪造这个源里的包。
+
+### 2.2 把公钥装到路由器
+
+公钥不是秘密，仓库里也放了一份：
+[`keys/776cc6b50a033ebf.pub`](../keys/776cc6b50a033ebf.pub)。
+需要把它放到路由器的 `/etc/opkg/keys/` 下，**文件名就是 key id**
+（`usign -F -p <pub>` 的输出）：
+
+```sh
+mkdir -p /etc/opkg/keys
+cat > /etc/opkg/keys/776cc6b50a033ebf <<'EOF'
+untrusted comment: yuzl1 luci-app-tailscale-23.05 feed
+RWR3bMa1CgM+v2US9cs2lxNpCg9n+FDyBwZvTU/cm+CvZ3mfutaY9Rt+
+EOF
+```
+
+（也可以从仓库里 `scp` 过去：）
+
+```sh
+scp -O keys/776cc6b50a033ebf.pub root@192.168.1.1:/etc/opkg/keys/776cc6b50a033ebf
+```
+
+装好后确认：
+
+```sh
+ls -l /etc/opkg/keys/776cc6b50a033ebf
+```
+
+### 2.3 验证签名
+
+feed 上已经有 `Packages.sig` 之后，可以手动验一次：
+
+```sh
+wget -O /tmp/Packages.gz https://yuzl1.github.io/luci-app-tailscale-23.05/Packages.gz
+wget -O /tmp/Packages.sig https://yuzl1.github.io/luci-app-tailscale-23.05/Packages.sig
+gunzip -c /tmp/Packages.gz > /tmp/Packages
+usign -V -m /tmp/Packages -p /etc/opkg/keys/776cc6b50a033ebf -x /tmp/Packages.sig
+```
+
+没有输出即表示校验通过。
+
+## 3. 备选：允许未签名的源
+
+如果你暂时不想配置签名，也可以关掉签名校验。此时 `opkg update` 会报：
 
 ```
 Failed to download .../Packages.sig, wget returned 8
@@ -47,7 +104,7 @@ option check_signature
 > 加 usign 签名（需要把签名私钥放进仓库 secret，再在 CI 里生成
 > `Packages.sig`），需要的话可以再配。
 
-## 3. 刷新并安装
+## 4. 刷新并安装
 
 1. 回到 **系统 → 软件包**，点 **刷新列表**（Update lists）
 2. 搜索 `luci-app-tailscale-community`
@@ -55,7 +112,7 @@ option check_signature
    `tailscale`、`ip-full`、`luci-base`、`rpcd-mod-ucode`、
    `ucode-mod-fs/uci/ubus`
 
-## 4. 验证
+## 5. 验证
 
 * 菜单出现 **服务 → Tailscale**
 * 命令行验证：

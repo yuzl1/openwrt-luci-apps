@@ -39,6 +39,30 @@ jobs:
           cp dist/*.ipk dist/Packages dist/Packages.gz publish/
           ls -l publish
 
+      - name: Build usign
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential
+          git clone --depth 1 https://github.com/openwrt/usign.git /tmp/usign
+          cmake -S /tmp/usign -B /tmp/usign/build > /dev/null
+          cmake --build /tmp/usign/build --parallel > /dev/null
+          sudo install -m755 /tmp/usign/build/usign /usr/local/bin/usign
+          usign -V 2>&1 | head -2 || true
+
+      - name: Sign the package index
+        env:
+          USIGN_SECRET: ${{ secrets.USIGN_SECRET }}
+        run: |
+          if [ -z "$USIGN_SECRET" ]; then
+            echo "USIGN_SECRET is not set - publishing an unsigned feed"
+            exit 0
+          fi
+          printf '%s\n' "$USIGN_SECRET" > /tmp/feed.sec
+          usign -S -m publish/Packages -s /tmp/feed.sec -x publish/Packages.sig
+          rm -f /tmp/feed.sec
+          usign -F -p keys/776cc6b50a033ebf.pub
+          ls -l publish
+
       - name: Publish opkg feed to gh-pages
         if: github.event_name != 'pull_request'
         uses: peaceiris/actions-gh-pages@v4
