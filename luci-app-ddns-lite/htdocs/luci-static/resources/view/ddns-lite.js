@@ -202,6 +202,11 @@ return view.extend({
 		});
 		if (!providers.length)
 			o.value('dnspod.cn', 'DNSPod / Tencent DNS (ID + token)');
+		else {
+			const saved = uci.get('ddns-lite', 'settings', 'provider');
+			if (saved && providers.indexOf(saved) < 0)
+				o.value(saved, saved + ' (' + _('package not installed') + ')');
+		}
 		o.default = 'dnspod.cn';
 		o.rmempty = false;
 		o.description = _('Only providers with an installed ddns-scripts service are listed; ' +

@@ -141,7 +141,9 @@ methods.providers = {
 
 methods.status = {
 	call: function() {
-		const running = (sh('pidof dynamic_dns_updater.sh') != '');
+		/* The updater is a shell script, so match the command line instead
+		 * of relying on pidof() and the process comm name. */
+		const running = (sh("pgrep -f 'dynamic_dns_updater' 2>/dev/null") != '');
 		const log = sh("logread 2>/dev/null | grep -i 'ddns' | tail -n 20");
 
 		return { running: running, log: log };
