@@ -146,10 +146,17 @@ implementation instead of a Go daemon.
   entries (marked `managed_by ddns-lite`) and restarts `ddns`
 * Entries created by hand with the normal ddns-scripts UI are left untouched
 
-Supported providers in the shipped dependency list: DNSPod/Tencent
-(`dnspod.cn`), Cloudflare and Aliyun. Adding more is a matter of installing
-the matching `ddns-scripts-*` package and adding a value to the provider
-list in the view.
+Providers are **not** bundled: install only the `ddns-scripts-*` package for
+the service you actually use.
+
+```sh
+opkg install ddns-scripts-dnspod        # DNSPod / Tencent DNS
+opkg install ddns-scripts-cloudflare    # Cloudflare
+opkg install ddns-scripts_aliyun        # Aliyun DNS
+```
+
+The provider list in the page only shows services that are installed (it
+reads `/usr/share/ddns/default/*.json`), so nothing extra is pulled in.
 
 ## Rotating the feed signing key
 

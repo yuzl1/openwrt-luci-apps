@@ -235,8 +235,16 @@ git rm keys/<旧keyid>.pub
   `managed_by ddns-lite` 标记）并重启 `ddns` 服务
 * 通过原版 ddns-scripts 界面手工创建的条目不会被改动
 
-依赖里已经带了 DNSPod/腾讯云（`dnspod.cn`）、Cloudflare、阿里云三种服务商脚本；
-要支持更多服务商，装对应的 `ddns-scripts-*` 包并在页面选项里加一项即可。
+服务商脚本**不再默认安装**，用哪个装哪个：
+
+```sh
+opkg install ddns-scripts-dnspod        # DNSPod / 腾讯云
+opkg install ddns-scripts-cloudflare    # Cloudflare
+opkg install ddns-scripts_aliyun        # 阿里云
+```
+
+页面里的服务商列表只显示已安装的服务（读取 `/usr/share/ddns/default/*.json`），
+没装的自然不会出现，也不会被顺带装上。
 
 ## 不需要 SDK 的本地打包
 

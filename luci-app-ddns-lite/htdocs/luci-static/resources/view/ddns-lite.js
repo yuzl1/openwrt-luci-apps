@@ -8,6 +8,7 @@
 
 const callApply = rpc.declare({ object: 'ddns-lite', method: 'apply' });
 const callStatus = rpc.declare({ object: 'ddns-lite', method: 'status' });
+const callProviders = rpc.declare({ object: 'ddns-lite', method: 'providers' });
 
 const V4_URLS = 'https://myip.ipip.net https://ddns.oray.com/checkip ' +
 	'https://ip.3322.net https://4.ipw.cn https://v4.yinghualuo.cn/bejson';
@@ -27,6 +28,15 @@ function renderStatus(status) {
 		E('pre', { 'style': 'max-height:220px;overflow:auto;white-space:pre-wrap' }, log)
 	]);
 }
+
+const PROVIDER_LABELS = {
+	'dnspod.cn': 'DNSPod / Tencent DNS (ID + token)',
+	'cloudflare.com-v4': 'Cloudflare (e-mail + API token)',
+	'aliyun.com': 'Aliyun DNS (AccessKey ID + secret)',
+	'freedns.afraid.org': 'FreeDNS',
+	'no-ip.com': 'No-IP',
+	'dynv6.com': 'dynv6'
+};
 
 function familyOptions(s, family, defaultUrls, defaultSource) {
 	let o;
@@ -71,11 +81,15 @@ function familyOptions(s, family, defaultUrls, defaultSource) {
 
 return view.extend({
 	load: function() {
-		return uci.load('ddns-lite');
+		return Promise.all([
+			uci.load('ddns-lite'),
+			L.resolveDefault(callProviders(), {})
+		]);
 	},
 
-	render: function() {
+	render: function(data) {
 		let m, s, o;
+		const providers = (data && data[1] && data[1].providers) || [];
 
 		m = new form.Map('ddns-lite', _('DDNS Lite'),
 			_('Lightweight DDNS built on ddns-scripts: pick a provider, enter the credentials, then describe how IPv4 and IPv6 are obtained.'));
@@ -83,12 +97,15 @@ return view.extend({
 		s = m.section(form.NamedSection, 'settings', 'settings', _('Account'));
 
 		o = s.option(form.ListValue, 'provider', _('DNS provider'));
-		o.value('dnspod.cn', 'DNSPod / Tencent DNS (ID + token)');
-		o.value('cloudflare.com-v4', 'Cloudflare (e-mail + API token)');
-		o.value('aliyun.com', 'Aliyun DNS (AccessKey ID + secret)');
-		o.value('freedns.afraid.org', 'FreeDNS');
+		providers.forEach(function(p) {
+			o.value(p, PROVIDER_LABELS[p] || p);
+		});
+		if (!providers.length)
+			o.value('dnspod.cn', 'DNSPod / Tencent DNS (ID + token)');
 		o.default = 'dnspod.cn';
 		o.rmempty = false;
+		o.description = _('Only providers with an installed ddns-scripts service are listed; ' +
+			'install the matching package (for example ddns-scripts-dnspod) to add more.');
 
 		o = s.option(form.Value, 'username', _('Account / ID'),
 			_('DNSPod: numeric ID. Cloudflare: account e-mail. Aliyun: AccessKey ID.'));

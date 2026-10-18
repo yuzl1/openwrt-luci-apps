@@ -98,6 +98,27 @@ function add_family(ipv6) {
 
 const methods = {};
 
+methods.providers = {
+	call: function() {
+		const out = sh("ls -1 /usr/share/ddns/default/*.json 2>/dev/null");
+		const found = [];
+
+		if (length(out)) {
+			const lines = split(out, '\n');
+			for (let i = 0; i < length(lines); i++) {
+				let name = trim(lines[i]);
+				if (!length(name))
+					continue;
+				name = replace(name, /.*\//, '');
+				name = replace(name, /\.json$/, '');
+				push(found, name);
+			}
+		}
+
+		return { providers: found };
+	}
+};
+
 methods.status = {
 	call: function() {
 		const running = (sh('pidof dynamic_dns_updater.sh') != '');
