@@ -59,7 +59,7 @@ the repository can be used as a normal package feed. See
 Short version:
 
 ```sh
-echo 'src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05' \
+echo 'src/gz tailscale23 https://yuzl1.github.io/openwrt-luci-apps' \
 	>> /etc/opkg/customfeeds.conf
 sed -i 's/^option check_signature/# option check_signature/' /etc/opkg.conf
 opkg update
@@ -108,7 +108,7 @@ scp -O keys/776cc6b50a033ebf.pub \
 ```sh
 mkdir -p /etc/opkg/keys
 cat > /etc/opkg/keys/776cc6b50a033ebf <<'EOF'
-untrusted comment: yuzl1 luci-app-tailscale-23.05 feed
+untrusted comment: yuzl1 openwrt-luci-apps feed
 RWR3bMa1CgM+v2US9cs2lxNpCg9n+FDyBwZvTU/cm+CvZ3mfutaY9Rt+
 EOF
 ```
@@ -157,7 +157,7 @@ the tool works:
 
 ```sh
 usign -G -s /tmp/feed.sec -p /tmp/feed.pub \
-	-c "yuzl1 luci-app-tailscale-23.05 feed"
+	-c "yuzl1 openwrt-luci-apps feed"
 usign -F -p /tmp/feed.pub          # new key id, also the file name
 ```
 

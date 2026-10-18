@@ -64,7 +64,7 @@ LuCI 网页里完成：
 2. 在 `/etc/opkg/customfeeds.conf` 末尾加一行：
 
 ```
-src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05
+src/gz tailscale23 https://yuzl1.github.io/openwrt-luci-apps
 ```
 
 3. 如果源还没有签名（见下一节），把 `/etc/opkg.conf` 里的
@@ -74,7 +74,7 @@ src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05
 命令行等价写法：
 
 ```sh
-echo 'src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05' \
+echo 'src/gz tailscale23 https://yuzl1.github.io/openwrt-luci-apps' \
 	>> /etc/opkg/customfeeds.conf
 opkg update
 opkg install luci-app-tailscale-community
@@ -117,7 +117,7 @@ scp -O keys/776cc6b50a033ebf.pub \
 ```sh
 mkdir -p /etc/opkg/keys
 cat > /etc/opkg/keys/776cc6b50a033ebf <<'EOF'
-untrusted comment: yuzl1 luci-app-tailscale-23.05 feed
+untrusted comment: yuzl1 openwrt-luci-apps feed
 RWR3bMa1CgM+v2US9cs2lxNpCg9n+FDyBwZvTU/cm+CvZ3mfutaY9Rt+
 EOF
 ```
@@ -142,7 +142,7 @@ GitHub 的 Secret 只写不可读，所以一定要另外备份一份，否则�
 两行，并同时记下 key id、用途和创建日期：
 
 ```
-untrusted comment: yuzl1 luci-app-tailscale-23.05 feed
+untrusted comment: yuzl1 openwrt-luci-apps feed
 RWRCSwAAAADJM8yigmcWB9yADgAaMmkizErB2QBfnEh3bMa1CgM+v3A9K7stukgc3cXmMfT/0dWcyfhqx2zIbvwuUvC8WXhjZRL1yzaXE2kKD2f4UPIHBm9NT9yb4K9neZ+61pj1G34=
 ```
 
@@ -171,7 +171,7 @@ rm -f /tmp/feed.sec
 
 ```sh
 usign -G -s /tmp/feed.sec -p /tmp/feed.pub \
-	-c "yuzl1 luci-app-tailscale-23.05 feed"
+	-c "yuzl1 openwrt-luci-apps feed"
 usign -F -p /tmp/feed.pub          # 新的 key id，也就是文件名
 ```
 

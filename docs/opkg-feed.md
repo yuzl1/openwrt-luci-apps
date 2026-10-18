@@ -4,7 +4,7 @@
 直接当作一个 opkg 源使用：
 
 ```
-https://yuzl1.github.io/luci-app-tailscale-23.05
+https://yuzl1.github.io/openwrt-luci-apps
 ```
 
 ## 1. 添加软件源
@@ -14,7 +14,7 @@ https://yuzl1.github.io/luci-app-tailscale-23.05
 3. 在文本框 `/etc/opkg/customfeeds.conf` 末尾追加一行：
 
 ```
-src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05
+src/gz tailscale23 https://yuzl1.github.io/openwrt-luci-apps
 ```
 
 4. 先不要关窗口，继续下一步
@@ -26,7 +26,7 @@ OpenWrt 的 opkg 默认要求每个源都有 `Packages.sig` 签名文件。本�
 
 ### 2.1 在仓库里配置签名私钥
 
-1. 打开 <https://github.com/yuzl1/luci-app-tailscale-23.05/settings/secrets/actions>
+1. 打开 <https://github.com/yuzl1/openwrt-luci-apps/settings/secrets/actions>
 2. **New repository secret**
 3. Name 填 `USIGN_SECRET`，Secret 粘贴仓库维护者手里的签名私钥（以
    `untrusted comment:` 开头、包含 `RWRC...` 那一行，共两行）
@@ -47,7 +47,7 @@ OpenWrt 的 opkg 默认要求每个源都有 `Packages.sig` 签名文件。本�
 ```sh
 mkdir -p /etc/opkg/keys
 cat > /etc/opkg/keys/776cc6b50a033ebf <<'EOF'
-untrusted comment: yuzl1 luci-app-tailscale-23.05 feed
+untrusted comment: yuzl1 openwrt-luci-apps feed
 RWR3bMa1CgM+v2US9cs2lxNpCg9n+FDyBwZvTU/cm+CvZ3mfutaY9Rt+
 EOF
 ```
@@ -69,8 +69,8 @@ ls -l /etc/opkg/keys/776cc6b50a033ebf
 feed 上已经有 `Packages.sig` 之后，可以手动验一次：
 
 ```sh
-wget -O /tmp/Packages.gz https://yuzl1.github.io/luci-app-tailscale-23.05/Packages.gz
-wget -O /tmp/Packages.sig https://yuzl1.github.io/luci-app-tailscale-23.05/Packages.sig
+wget -O /tmp/Packages.gz https://yuzl1.github.io/openwrt-luci-apps/Packages.gz
+wget -O /tmp/Packages.sig https://yuzl1.github.io/openwrt-luci-apps/Packages.sig
 gunzip -c /tmp/Packages.gz > /tmp/Packages
 usign -V -m /tmp/Packages -p /etc/opkg/keys/776cc6b50a033ebf -x /tmp/Packages.sig
 ```
@@ -128,7 +128,7 @@ opkg list-installed | grep -E 'tailscale|ip-full'
 不想点网页时，同样的事情可以用下面几条命令完成：
 
 ```sh
-echo 'src/gz tailscale23 https://yuzl1.github.io/luci-app-tailscale-23.05' \
+echo 'src/gz tailscale23 https://yuzl1.github.io/openwrt-luci-apps' \
 	>> /etc/opkg/customfeeds.conf
 sed -i 's/^option check_signature/# option check_signature/' /etc/opkg.conf
 opkg update
