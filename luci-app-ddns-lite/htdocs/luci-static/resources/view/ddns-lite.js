@@ -39,7 +39,13 @@ function renderStatus(status) {
 }
 
 function serviceAction(action) {
-	return callServiceControl(action).then(function(res) {
+	// Starting or restarting must reflect what is currently in the form, so
+	// regenerate the ddns entries first instead of relying on a stale config.
+	const prep = (action == 'stop') ? Promise.resolve() : callApply();
+
+	return prep.then(function() {
+		return callServiceControl(action);
+	}).then(function(res) {
 		if (res && res.ok)
 			ui.addNotification(null, E('p', {}, _('Service %s requested.').format(action)), 'info');
 		else
@@ -54,6 +60,15 @@ function serviceAction(action) {
 		ui.addNotification(null,
 			E('p', {}, _('Service action failed: %s').format(err && err.message || err)), 'error');
 	});
+}
+
+function notifyApply(res) {
+	if (res && res.ok) {
+		ui.addNotification(null, E('p', {}, _('Applied %s DDNS entries.').format(res.entries)), 'info');
+		return true;
+	}
+	ui.addNotification(null, E('p', {}, (res && res.error) || _('Failed to apply the configuration.')), 'error');
+	return false;
 }
 
 function actionButton(label, action, style) {
@@ -297,19 +312,22 @@ return view.extend({
 			return ui.changes.apply(mode == '0');
 		}).then(function() {
 			return callApply();
-		}).then(function(res) {
-			if (res && res.ok)
-				ui.addNotification(null,
-					E('p', {}, _('Applied %s DDNS entries.').format(res.entries)), 'info');
-			else
-				ui.addNotification(null,
-					E('p', {}, (res && res.error) || _('Failed to apply the configuration.')), 'error');
-		}).catch(function(err) {
+		}).then(notifyApply).catch(function(err) {
 			ui.addNotification(null,
 				E('p', {}, _('Failed to apply: %s').format(err && err.message || err)), 'error');
 		});
 	},
 
-	handleSave: null,
+	handleSave: function(ev, mode) {
+		return map.save().then(function() {
+			return ui.changes.apply(false);
+		}).then(function() {
+			return callApply();
+		}).then(notifyApply).catch(function(err) {
+			ui.addNotification(null,
+				E('p', {}, _('Failed to apply: %s').format(err && err.message || err)), 'error');
+		});
+	},
+
 	handleReset: null
 });
