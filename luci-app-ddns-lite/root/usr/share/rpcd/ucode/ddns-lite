@@ -89,31 +89,25 @@ function add_family(ipv6) {
 		if (ipv6)
 			opt('ddns', sid, 'use_ipv6', '1');
 
-		switch (source) {
-		case 'interface':
+		if (source == 'interface') {
 			const dev = get(section, 'interface', 'pppoe-wan');
 			opt('ddns', sid, 'interface', dev);
 			opt('ddns', sid, 'ip_source', 'interface');
 			opt('ddns', sid, 'ip_interface', dev);
-			break;
-
-		case 'script':
+		}
+		else if (source == 'script') {
 			opt('ddns', sid, 'ip_source', 'script');
 			opt('ddns', sid, 'ip_script', get(section, 'script', ''));
-			break;
-
-		case 'network':
+		}
+		else if (source == 'network') {
 			const net = get(section, 'network', 'pppoe-wan');
 			opt('ddns', sid, 'interface', net);
 			opt('ddns', sid, 'ip_source', 'network');
 			opt('ddns', sid, 'ip_network', net);
-			break;
-
-		case 'web':
-		default:
+		}
+		else {
 			opt('ddns', sid, 'ip_source', 'web');
 			opt('ddns', sid, 'ip_url', get(section, 'url', ''));
-			break;
 		}
 
 		count++;
@@ -186,4 +180,4 @@ methods.apply = {
 	}
 };
 
-return methods;
+return { 'ddns-lite': methods };
