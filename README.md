@@ -133,8 +133,15 @@ future builds, and it must never be committed or shipped.
 the ID/token, list the domains) while keeping the tiny `ddns-scripts`
 implementation instead of a Go daemon.
 
-* *Services -> DDNS Lite*: choose the provider, credentials, the interface
-  (`pppoe-wan`), the domains, IPv4/IPv6 and the check interval
+* *Services -> DDNS Lite*: choose the provider, enter the credentials and the
+  check interval
+* IPv4 and IPv6 are configured separately, each with one of four IP sources:
+  logical interface (`network`), network device (`interface`), URL check
+  (`web`) or a command (`script`)
+* built-in IPv4 check URLs: `myip.ipip.net`, `ddns.oray.com/checkip`,
+  `ip.3322.net`, `4.ipw.cn`, `v4.yinghualuo.cn/bejson`
+* built-in IPv6 check URLs: `speed.neu6.edu.cn/getIP.php`, `v6.ident.me`,
+  `6.ipw.cn`, `v6.yinghualuo.cn/bejson`
 * **Save & Apply** regenerates the matching `/etc/config/ddns` service
   entries (marked `managed_by ddns-lite`) and restarts `ddns`
 * Entries created by hand with the normal ddns-scripts UI are left untouched

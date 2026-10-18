@@ -224,8 +224,13 @@ git rm keys/<旧keyid>.pub
 `luci-app-ddns-lite` 用 ddns-go 的使用思路（选服务商、填 ID/Token、列域名），
 但底层复用 `ddns-scripts`，不额外跑 Go 进程，内存占用很小。
 
-* **服务 → DDNS Lite**：选服务商、填账号/ID 与 Token、选接口（`pppoe-wan`）、
-  填域名、选择 IPv4/IPv6、设置检查间隔
+* **服务 → DDNS Lite**：选服务商、填账号/ID 与 Token、设置检查间隔
+* IPv4 和 IPv6 分开配置，每种都支持四种获取方式：
+  逻辑接口（`network`）、网卡设备（`interface`）、URL 获取（`web`）、命令获取（`script`）
+* IPv4 内置查询地址：`myip.ipip.net`、`ddns.oray.com/checkip`、
+  `ip.3322.net`、`4.ipw.cn`、`v4.yinghualuo.cn/bejson`
+* IPv6 内置查询地址：`speed.neu6.edu.cn/getIP.php`、`v6.ident.me`、
+  `6.ipw.cn`、`v6.yinghualuo.cn/bejson`
 * 点 **保存并应用** 会自动生成对应的 `/etc/config/ddns` 条目（带
   `managed_by ddns-lite` 标记）并重启 `ddns` 服务
 * 通过原版 ddns-scripts 界面手工创建的条目不会被改动

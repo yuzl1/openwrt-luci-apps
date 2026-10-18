@@ -143,7 +143,7 @@ pack "$HERE" \
 	""
 
 pack "$HERE/luci-app-ddns-lite" \
-	luci-app-ddns-lite 1.0.0-1 \
+	luci-app-ddns-lite 1.1.0-1 \
 	"ddns-scripts, ddns-scripts-services, ddns-scripts-dnspod, ddns-scripts-cloudflare, ddns-scripts_aliyun, curl, luci-base, rpcd-mod-ucode, ucode, ucode-mod-fs, ucode-mod-uci, ucode-mod-ubus" \
 	"LuCI DDNS Lite" \
 	"Simple ddns-go style UI that generates ddns-scripts entries." \

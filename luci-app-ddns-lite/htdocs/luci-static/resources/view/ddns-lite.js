@@ -9,6 +9,11 @@
 const callApply = rpc.declare({ object: 'ddns-lite', method: 'apply' });
 const callStatus = rpc.declare({ object: 'ddns-lite', method: 'status' });
 
+const V4_URLS = 'https://myip.ipip.net https://ddns.oray.com/checkip ' +
+	'https://ip.3322.net https://4.ipw.cn https://v4.yinghualuo.cn/bejson';
+const V6_URLS = 'https://speed.neu6.edu.cn/getIP.php https://v6.ident.me ' +
+	'https://6.ipw.cn https://v6.yinghualuo.cn/bejson';
+
 let map;
 
 function renderStatus(status) {
@@ -23,6 +28,47 @@ function renderStatus(status) {
 	]);
 }
 
+function familyOptions(s, family, defaultUrls, defaultSource) {
+	let o;
+
+	o = s.option(form.Flag, 'enabled', _('Enable'));
+	o.default = '0';
+	o.rmempty = false;
+
+	o = s.option(form.ListValue, 'source', _('Get IP via'));
+	o.value('network', _('Logical interface (network)'));
+	o.value('interface', _('Network device (interface)'));
+	o.value('web', _('URL check (web)'));
+	o.value('script', _('Command (script)'));
+	o.default = defaultSource;
+	o.rmempty = false;
+
+	o = s.option(form.TextValue, 'url', _('Check URLs'),
+		_('Space separated, tried in order until an address is returned.'));
+	o.default = defaultUrls;
+	o.rows = 3;
+	o.depends('source', 'web');
+
+	o = s.option(form.Value, 'network', _('Logical interface'),
+		_('OpenWrt interface name, e.g. pppoe-wan or wan6.'));
+	o.default = 'pppoe-wan';
+	o.depends('source', 'network');
+
+	o = s.option(form.Value, 'interface', _('Network device'),
+		_('Device name, e.g. br-lan, pppoe-wan or tailscale0.'));
+	o.default = 'pppoe-wan';
+	o.depends('source', 'interface');
+
+	o = s.option(form.Value, 'script', _('Command'),
+		_('Only stdout is used; the first matching address is taken.'));
+	o.depends('source', 'script');
+
+	o = s.option(form.DynamicList, 'domains', _('Domains'),
+		_('One entry per domain, e.g. home.example.com.'));
+	o.datatype = 'hostname';
+	o.rmempty = false;
+}
+
 return view.extend({
 	load: function() {
 		return uci.load('ddns-lite');
@@ -32,10 +78,9 @@ return view.extend({
 		let m, s, o;
 
 		m = new form.Map('ddns-lite', _('DDNS Lite'),
-			_('Lightweight DDNS built on ddns-scripts: pick a provider, enter the credentials and list the domains.'));
+			_('Lightweight DDNS built on ddns-scripts: pick a provider, enter the credentials, then describe how IPv4 and IPv6 are obtained.'));
 
-		s = m.section(form.TypedSection, 'settings', _('Configuration'));
-		s.anonymous = true;
+		s = m.section(form.NamedSection, 'settings', 'settings', _('Account'));
 
 		o = s.option(form.ListValue, 'provider', _('DNS provider'));
 		o.value('dnspod.cn', 'DNSPod / Tencent DNS (ID + token)');
@@ -54,23 +99,6 @@ return view.extend({
 		o.password = true;
 		o.rmempty = false;
 
-		o = s.option(form.Value, 'interface', _('Interface'),
-			_('Interface used to read the public address, normally pppoe-wan.'));
-		o.default = 'pppoe-wan';
-		o.datatype = 'network';
-		o.rmempty = false;
-
-		o = s.option(form.DynamicList, 'domains', _('Domains'),
-			_('One entry per domain, e.g. home.example.com.'));
-		o.datatype = 'hostname';
-		o.rmempty = false;
-
-		o = s.option(form.Flag, 'ipv4', _('Update IPv4 (A record)'));
-		o.default = '1';
-
-		o = s.option(form.Flag, 'ipv6', _('Update IPv6 (AAAA record)'));
-		o.default = '0';
-
 		o = s.option(form.Value, 'interval', _('Check interval (minutes)'));
 		o.default = '10';
 		o.datatype = 'uinteger';
@@ -82,6 +110,12 @@ return view.extend({
 			return E('div', { 'class': 'cbi-value-field', 'id': 'ddns_lite_status' },
 				E('em', {}, _('Collecting data ...')));
 		};
+
+		s = m.section(form.NamedSection, 'ipv4', 'ipv4', _('IPv4 (A record)'));
+		familyOptions(s, 'ipv4', V4_URLS, 'web');
+
+		s = m.section(form.NamedSection, 'ipv6', 'ipv6', _('IPv6 (AAAA record)'));
+		familyOptions(s, 'ipv6', V6_URLS, 'interface');
 
 		map = m;
 		return m.render();

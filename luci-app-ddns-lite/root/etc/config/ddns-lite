@@ -1,7 +1,18 @@
 
 config settings 'settings'
 	option provider 'dnspod.cn'
-	option interface 'pppoe-wan'
-	option ipv4 '1'
-	option ipv6 '0'
 	option interval '10'
+
+config ipv4 'ipv4'
+	option enabled '1'
+	option source 'web'
+	option url 'https://myip.ipip.net https://ddns.oray.com/checkip https://ip.3322.net https://4.ipw.cn https://v4.yinghualuo.cn/bejson'
+	option network 'pppoe-wan'
+	option interface 'pppoe-wan'
+
+config ipv6 'ipv6'
+	option enabled '0'
+	option source 'interface'
+	option url 'https://speed.neu6.edu.cn/getIP.php https://v6.ident.me https://6.ipw.cn https://v6.yinghualuo.cn/bejson'
+	option network 'pppoe-wan'
+	option interface 'pppoe-wan'
