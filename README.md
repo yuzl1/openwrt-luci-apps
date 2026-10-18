@@ -16,9 +16,10 @@ The LuCI packages are architecture independent (`Architecture: all`); the
 published to the `gh-pages` branch as a normal opkg feed, together with a
 signed `Packages` index.
 
-The ARMv7 `tailscale` package depends on `iptables-nft`: upstream Tailscale
-does not build its native nftables backend on 32-bit ARM, so it needs the
-iptables compatibility commands backed by nftables.
+The ARMv7 `tailscale` package depends on `iptables-nft`, `ip6tables-nft`, and
+the conntrack/NAT kernel modules: upstream Tailscale does not build its native
+nftables backend on 32-bit ARM, so it uses the iptables compatibility path
+backed by nftables.
 
 Backport of the OpenWrt `luci-app-tailscale-community` LuCI application so it
 can be installed from opkg on 23.05 based firmware, including arm 32-bit

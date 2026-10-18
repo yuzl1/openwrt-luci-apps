@@ -6,7 +6,7 @@
 set -eu
 
 VERSION=${TAILSCALE_VERSION:-1.104.1}
-RELEASE=${TAILSCALE_RELEASE:-2}
+RELEASE=${TAILSCALE_RELEASE:-3}
 SOURCE_SHA256=${TAILSCALE_SHA256:-bf868b2b1a46b9485d55bcda12c2d7573279ce4474bc6d607f42f1495db36ed8}
 ARCH=arm_cortex-a7_neon-vfpv4
 
@@ -73,7 +73,7 @@ size_kb=$(( ($(wc -c < "$STAGE/data/usr/sbin/tailscaled") + 1023) / 1024 ))
 cat > "$STAGE/control/control" <<EOF
 Package: tailscale
 Version: ${VERSION}-${RELEASE}
-Depends: ca-bundle, iptables-nft, kmod-tun
+Depends: ca-bundle, iptables-nft, ip6tables-nft, iptables-mod-conntrack-extra, kmod-ipt-conntrack, kmod-ipt-conntrack-extra, kmod-ipt-nat, kmod-ipt-nat6, kmod-tun
 Provides: tailscaled
 Architecture: ${ARCH}
 Installed-Size: ${size_kb}
