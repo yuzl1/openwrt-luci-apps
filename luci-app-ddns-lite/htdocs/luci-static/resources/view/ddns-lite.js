@@ -82,7 +82,8 @@ function labelList(entries) {
 	});
 }
 
-function familyOptions(s, family, defaultUrls, defaultSource, networks, devices) {
+function familyOptions(s, family, defaultUrls, defaultSource, networks, devices,
+		defaultNetwork, defaultDevice) {
 	let o;
 
 	o = s.option(form.Flag, 'enabled', _('Enable'));
@@ -106,14 +107,14 @@ function familyOptions(s, family, defaultUrls, defaultSource, networks, devices)
 	o = s.option(form.ListValue, 'network', _('Logical interface'),
 		_('netifd interface (wan, wan6, pppoe-wan, lan) with its current address.'));
 	o.depends('source', 'network');
-	fillList(o, networks, ['pppoe-wan', 'wan', 'wan6', 'lan']);
-	o.default = 'pppoe-wan';
+	fillList(o, networks, [defaultNetwork, 'wan', 'wan6', 'pppoe-wan', 'lan']);
+	o.default = defaultNetwork;
 
 	o = s.option(form.ListValue, 'interface', _('Network device'),
 		_('Linux device (br-lan, pppoe-wan, tailscale0) with its current address.'));
 	o.depends('source', 'interface');
-	fillList(o, devices, ['pppoe-wan', 'br-lan']);
-	o.default = 'pppoe-wan';
+	fillList(o, devices, [defaultDevice, 'pppoe-wan', 'br-lan']);
+	o.default = defaultDevice;
 
 	o = s.option(form.Value, 'script', _('Command'),
 		_('Only stdout is used; the first matching address is taken.'));
@@ -127,7 +128,7 @@ function familyOptions(s, family, defaultUrls, defaultSource, networks, devices)
 		return validDomain(value) ? true
 			: _('Enter home.example.com, *.example.com or host@example.com');
 	};
-	o.rmempty = false;
+	o.rmempty = true;
 }
 
 return view.extend({
@@ -184,10 +185,12 @@ return view.extend({
 		};
 
 		s = m.section(form.NamedSection, 'ipv4', 'ipv4', _('IPv4 (A record)'));
-		familyOptions(s, 'ipv4', V4_URLS, 'web', networks, devices);
+		familyOptions(s, 'ipv4', V4_URLS, 'network', networks, devices,
+			'wan', 'pppoe-wan');
 
 		s = m.section(form.NamedSection, 'ipv6', 'ipv6', _('IPv6 (AAAA record)'));
-		familyOptions(s, 'ipv6', V6_URLS, 'interface', networks, devices);
+		familyOptions(s, 'ipv6', V6_URLS, 'network', networks, devices,
+			'wan6', 'pppoe-wan');
 
 		map = m;
 		return m.render();

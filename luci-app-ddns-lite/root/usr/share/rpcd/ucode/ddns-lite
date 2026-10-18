@@ -60,7 +60,7 @@ function add_family(ipv6) {
 	const username = get('settings', 'username', '');
 	const password = get('settings', 'password', '');
 	const interval = get('settings', 'interval', '10');
-	const source   = get(section, 'source', 'web');
+	const source   = get(section, 'source', 'network');
 	const domains  = uci.get('ddns-lite', section, 'domains') || [];
 
 	let count = 0;
