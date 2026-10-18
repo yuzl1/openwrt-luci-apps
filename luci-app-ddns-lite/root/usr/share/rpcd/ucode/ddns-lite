@@ -133,6 +133,7 @@ function add_family(ipv6) {
 			opt('ddns', sid, 'ip_interface', dev);
 		}
 		else if (source == 'script') {
+			opt('ddns', sid, 'interface', ipv6 ? 'wan6' : 'wan');
 			opt('ddns', sid, 'ip_source', 'script');
 			opt('ddns', sid, 'ip_script', get(section, 'script', ''));
 		}
@@ -143,6 +144,7 @@ function add_family(ipv6) {
 			opt('ddns', sid, 'ip_network', net);
 		}
 		else {
+			opt('ddns', sid, 'interface', ipv6 ? 'wan6' : 'wan');
 			opt('ddns', sid, 'ip_source', 'web');
 			opt('ddns', sid, 'ip_url', get(section, 'url', ''));
 		}
