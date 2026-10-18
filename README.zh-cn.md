@@ -231,6 +231,8 @@ git rm keys/<旧keyid>.pub
   `ip.3322.net`、`4.ipw.cn`、`v4.yinghualuo.cn/bejson`
 * IPv6 内置查询地址：`speed.neu6.edu.cn/getIP.php`、`v6.ident.me`、
   `6.ipw.cn`、`v6.yinghualuo.cn/bejson`
+* 支持泛域名：直接填 `*.example.com`；子域上的泛域名（`*.ipv4.example.com`）
+  会自动转换成 DNSPod 需要的 `*.ipv4@example.com`，也可以手写 `子域@主域` 形式
 * 点 **保存并应用** 会自动生成对应的 `/etc/config/ddns` 条目（带
   `managed_by ddns-lite` 标记）并重启 `ddns` 服务
 * 通过原版 ddns-scripts 界面手工创建的条目不会被改动

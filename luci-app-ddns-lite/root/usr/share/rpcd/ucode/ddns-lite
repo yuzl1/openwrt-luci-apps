@@ -26,6 +26,30 @@ function get(section, option, fallback) {
 	return (value == null || value == '') ? fallback : value;
 }
 
+/*
+ * dnspod.cn expects "host@zone" (e.g. ipv4@yu1998.com). ddns-scripts itself
+ * only splits at the first dot, which breaks wildcards on sub-domains such as
+ * *.ipv4.yu1998.com, so normalise it here. An explicit "@" is passed through.
+ */
+function dnspod_domain(domain) {
+	if (index(domain, '@') >= 0)
+		return domain;
+
+	const parts = split(domain, '.');
+	if (length(parts) < 2)
+		return domain;
+
+	let host = parts[0];
+	let rest = slice(parts, 1);
+
+	if (host == '*' && length(rest) >= 3) {
+		host = '*.' + rest[0];
+		rest = slice(rest, 1);
+	}
+
+	return host + '@' + join(rest, '.');
+}
+
 function add_family(ipv6) {
 	const section = ipv6 ? 'ipv6' : 'ipv4';
 
@@ -47,9 +71,11 @@ function add_family(ipv6) {
 			continue;
 
 		const sid = uci.add('ddns', 'service');
+		const ts_domain = (provider == 'dnspod.cn' || provider == 'dnspod.com')
+			? dnspod_domain(domain) : domain;
 
 		opt('ddns', sid, 'service_name', provider);
-		opt('ddns', sid, 'domain', domain);
+		opt('ddns', sid, 'domain', ts_domain);
 		opt('ddns', sid, 'lookup_host', domain);
 		opt('ddns', sid, 'username', username);
 		opt('ddns', sid, 'password', password);

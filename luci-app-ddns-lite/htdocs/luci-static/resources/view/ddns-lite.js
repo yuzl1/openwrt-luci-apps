@@ -39,6 +39,14 @@ const PROVIDER_LABELS = {
 	'dynv6.com': 'dynv6'
 };
 
+const DOMAIN_RE = /^(\*\.)?([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/;
+const HOSTZONE_RE = /^([A-Za-z0-9*]([A-Za-z0-9.*-]{0,61}[A-Za-z0-9*])?)@([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/;
+
+function validDomain(value) {
+	const v = (value || '').trim();
+	return DOMAIN_RE.test(v) || HOSTZONE_RE.test(v);
+}
+
 function fillList(o, items, fallbacks) {
 	const seen = {};
 
@@ -112,8 +120,13 @@ function familyOptions(s, family, defaultUrls, defaultSource, networks, devices)
 	o.depends('source', 'script');
 
 	o = s.option(form.DynamicList, 'domains', _('Domains'),
-		_('One entry per domain, e.g. home.example.com.'));
-	o.datatype = 'hostname';
+		_('One entry per domain. Plain names (home.example.com), wildcards (*.example.com) and the explicit DNSPod form host@zone.tld are accepted.'));
+	o.validate = function(section_id, value) {
+		if (value == null || value === '')
+			return true;
+		return validDomain(value) ? true
+			: _('Enter home.example.com, *.example.com or host@example.com');
+	};
 	o.rmempty = false;
 }
 

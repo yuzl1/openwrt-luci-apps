@@ -142,6 +142,9 @@ implementation instead of a Go daemon.
   `ip.3322.net`, `4.ipw.cn`, `v4.yinghualuo.cn/bejson`
 * built-in IPv6 check URLs: `speed.neu6.edu.cn/getIP.php`, `v6.ident.me`,
   `6.ipw.cn`, `v6.yinghualuo.cn/bejson`
+* wildcard records are accepted as `*.example.com`; for a wildcard on a
+  sub-domain (`*.ipv4.example.com`) the DNSPod `*.ipv4@example.com` form is
+  generated automatically, and `host@zone.tld` can be entered explicitly
 * **Save & Apply** regenerates the matching `/etc/config/ddns` service
   entries (marked `managed_by ddns-lite`) and restarts `ddns`
 * Entries created by hand with the normal ddns-scripts UI are left untouched
