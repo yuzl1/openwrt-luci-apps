@@ -81,7 +81,11 @@ function add_family(ipv6) {
 	const password = get('settings', 'password', '');
 	const interval = get('settings', 'interval', '10');
 	const source   = get(section, 'source', 'network');
-	const domains  = uci.get('ddns-lite', section, 'domains') || [];
+	let domains    = uci.get('ddns-lite', section, 'domains') || [];
+
+	/* A single entry may come back as a plain string instead of a list. */
+	if (type(domains) != 'array')
+		domains = [ domains ];
 
 	let count = 0;
 
