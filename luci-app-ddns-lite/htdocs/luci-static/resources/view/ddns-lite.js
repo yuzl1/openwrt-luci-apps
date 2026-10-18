@@ -10,6 +10,7 @@
 const callApply = rpc.declare({ object: 'ddns-lite', method: 'apply' });
 const callStatus = rpc.declare({ object: 'ddns-lite', method: 'status' });
 const callProviders = rpc.declare({ object: 'ddns-lite', method: 'providers' });
+const callServiceControl = rpc.declare({ object: 'ddns-lite', method: 'service_control', params: ['action'] });
 
 const V4_URLS = 'https://myip.ipip.net https://ddns.oray.com/checkip ' +
 	'https://ip.3322.net https://4.ipw.cn https://v4.yinghualuo.cn/bejson';
@@ -26,8 +27,43 @@ function renderStatus(status) {
 
 	return E('div', {}, [
 		E('p', {}, [ E('strong', { 'style': 'color:' + color }, text) ]),
+		E('div', { 'style': 'margin:0.5em 0' }, [
+			actionButton(_('Start'), 'start', 'cbi-button-positive'),
+			' ',
+			actionButton(_('Stop'), 'stop', 'cbi-button-negative'),
+			' ',
+			actionButton(_('Restart'), 'restart', 'cbi-button-action')
+		]),
 		E('pre', { 'style': 'max-height:220px;overflow:auto;white-space:pre-wrap' }, log)
 	]);
+}
+
+function serviceAction(action) {
+	return callServiceControl(action).then(function(res) {
+		if (res && res.ok)
+			ui.addNotification(null, E('p', {}, _('Service %s requested.').format(action)), 'info');
+		else
+			ui.addNotification(null, E('p', {}, (res && res.error) || _('Service action failed.')), 'error');
+	}).then(function() {
+		return new Promise(function(resolve) {
+			window.setTimeout(resolve, 1500);
+		});
+	}).then(function() {
+		return refreshStatus();
+	}).catch(function(err) {
+		ui.addNotification(null,
+			E('p', {}, _('Service action failed: %s').format(err && err.message || err)), 'error');
+	});
+}
+
+function actionButton(label, action, style) {
+	return E('button', {
+		'class': 'btn cbi-button ' + style,
+		'click': function(ev) {
+			ev.preventDefault();
+			return serviceAction(action);
+		}
+	}, label);
 }
 
 function refreshStatus() {

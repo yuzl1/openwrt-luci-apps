@@ -148,6 +148,20 @@ methods.status = {
 	}
 };
 
+methods.service_control = {
+	args: { action: '' },
+	call: function(request) {
+		const action = request.args.action;
+
+		if (action != 'start' && action != 'stop' && action != 'restart')
+			return { ok: false, error: 'Invalid action' };
+
+		const out = sh('/etc/init.d/ddns ' + action + ' 2>&1');
+
+		return { ok: true, action: action, output: out };
+	}
+};
+
 methods.apply = {
 	call: function() {
 		uci.load('ddns-lite');

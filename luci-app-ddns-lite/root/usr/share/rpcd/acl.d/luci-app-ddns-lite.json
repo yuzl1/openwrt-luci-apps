@@ -9,7 +9,7 @@
 		},
 		"write": {
 			"ubus": {
-				"ddns-lite": [ "apply" ]
+				"ddns-lite": [ "apply", "service_control" ]
 			},
 			"uci": [ "ddns-lite" ]
 		}
