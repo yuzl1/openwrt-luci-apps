@@ -42,6 +42,7 @@ usign -F -p /etc/opkg/keys/776cc6b50a033ebf     # 输出 776cc6b50a033ebf
 opkg update
 opkg list | grep -E 'luci-app-(tailscale|ddns)'
 opkg install luci-app-tailscale-community
+opkg install tailscale                # 红米 AX3000 当前上游版本
 opkg install luci-app-ddns-lite
 opkg install openssl-util            # 只有腾讯云 TC3 模式才需要
 ```
@@ -54,5 +55,6 @@ opkg install openssl-util            # 只有腾讯云 TC3 模式才需要
 ## 说明
 
 * 本分支由 GitHub Actions 自动覆盖，请不要在这里手工提交。
-* 所有包都是 `Architecture: all`，适用于 23.05 系列的各个架构。
+* LuCI 插件是 `Architecture: all`；`tailscale` 核心包仅适用于红米 AX3000
+  的 `arm_cortex-a7_neon-vfpv4` 目标。
 * 详细配置说明见源码仓库的 [README](https://github.com/yuzl1/openwrt-luci-apps/blob/main/README.zh-cn.md)。

@@ -10,8 +10,12 @@
 | `tailscale` | 为红米 AX3000 ARMv7 交叉构建的当前上游 Tailscale 守护进程 |
 | `luci-app-ddns-lite` | 独立 DNSPod DDNS 客户端，支持旧版 Token 和腾讯云 TC3 签名 |
 
-两个包都是 `Architecture: all`，构建后连同签名索引一起发布到 `gh-pages`
-分支，可以直接作为 opkg 源使用。
+LuCI 插件是 `Architecture: all`；`tailscale` 核心包为红米 AX3000 ARMv7
+单独构建。所有包连同签名索引一起发布到 `gh-pages` 分支，可以直接作为
+opkg 源使用。
+
+ARMv7 的 `tailscale` 包依赖 `iptables-nft`：上游 Tailscale 在 32 位 ARM
+上没有编译原生 nftables 后端，需要通过 iptables 兼容命令操作 nftables。
 
 把 OpenWrt 主线的 `luci-app-tailscale-community` 应用回移到 23.05 系列固件，
 可以用 opkg 安装，包含 arm 32 位目标（例如红米 AX3000 / RA81）。

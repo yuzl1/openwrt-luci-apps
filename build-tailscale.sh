@@ -6,6 +6,7 @@
 set -eu
 
 VERSION=${TAILSCALE_VERSION:-1.104.1}
+RELEASE=${TAILSCALE_RELEASE:-2}
 SOURCE_SHA256=${TAILSCALE_SHA256:-bf868b2b1a46b9485d55bcda12c2d7573279ce4474bc6d607f42f1495db36ed8}
 ARCH=arm_cortex-a7_neon-vfpv4
 
@@ -15,7 +16,7 @@ BUILD=$OUT/.build-tailscale
 SOURCE_ARCHIVE=$BUILD/tailscale-v$VERSION.tar.gz
 SOURCE_DIR=$BUILD/tailscale-v$VERSION
 STAGE=$BUILD/stage
-IPK=$OUT/tailscale_${VERSION}-1_${ARCH}.ipk
+IPK=$OUT/tailscale_${VERSION}-${RELEASE}_${ARCH}.ipk
 
 sha256_file() {
 	if command -v sha256sum >/dev/null 2>&1; then
@@ -57,7 +58,7 @@ echo "Building Tailscale $VERSION for linux/arm (GOARM=7)"
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 GOTOOLCHAIN=auto \
 		go build -trimpath -buildvcs=false \
 		-tags=ts_include_cli,ts_omit_aws,ts_omit_bird,ts_omit_tap,ts_omit_kube,ts_omit_completion \
-		-ldflags "-s -w -X 'tailscale.com/version.longStamp=${VERSION}-1 (OpenWrt)' -X 'tailscale.com/version.shortStamp=${VERSION}'" \
+		-ldflags "-s -w -X 'tailscale.com/version.longStamp=${VERSION}-${RELEASE} (OpenWrt)' -X 'tailscale.com/version.shortStamp=${VERSION}'" \
 		-o "$STAGE/data/usr/sbin/tailscaled" ./cmd/tailscaled
 )
 
@@ -71,8 +72,8 @@ size_kb=$(( ($(wc -c < "$STAGE/data/usr/sbin/tailscaled") + 1023) / 1024 ))
 
 cat > "$STAGE/control/control" <<EOF
 Package: tailscale
-Version: ${VERSION}-1
-Depends: ca-bundle, kmod-tun
+Version: ${VERSION}-${RELEASE}
+Depends: ca-bundle, iptables-nft, kmod-tun
 Provides: tailscaled
 Architecture: ${ARCH}
 Installed-Size: ${size_kb}
