@@ -82,7 +82,7 @@ function familyOptions(s, family, defaultUrls, defaultSource, networks, devices)
 	o.rmempty = false;
 
 	o = s.option(form.ListValue, 'source', _('Get IP via'));
-	o.value('network', _('Logical interface (network)'));
+	o.value('network', _('Logical interface (network) - recommended'));
 	o.value('interface', _('Network device (interface)'));
 	o.value('web', _('URL check (web)'));
 	o.value('script', _('Command (script)'));
