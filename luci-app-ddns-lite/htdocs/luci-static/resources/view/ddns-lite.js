@@ -30,6 +30,14 @@ function renderStatus(status) {
 	]);
 }
 
+function refreshStatus() {
+	return L.resolveDefault(callStatus(), {}).then(function(status) {
+		const el = document.getElementById('ddns_lite_status');
+		if (el)
+			el.replaceChildren(renderStatus(status));
+	});
+}
+
 const PROVIDER_LABELS = {
 	'dnspod.cn': 'DNSPod / Tencent DNS (ID + token)',
 	'cloudflare.com-v4': 'Cloudflare (e-mail + API token)',
@@ -193,7 +201,12 @@ return view.extend({
 			'wan6', 'pppoe-wan');
 
 		map = m;
-		return m.render();
+		const rendered = m.render();
+
+		window.setTimeout(refreshStatus, 200);
+		poll.add(refreshStatus, 10);
+
+		return rendered;
 	},
 
 	handleSaveApply: function(ev, mode) {
@@ -215,15 +228,5 @@ return view.extend({
 	},
 
 	handleSave: null,
-	handleReset: null,
-
-	renderAfter: function() {
-		poll.add(function() {
-			return L.resolveDefault(callStatus(), {}).then(function(status) {
-				const el = document.getElementById('ddns_lite_status');
-				if (el)
-					el.replaceChildren(renderStatus(status));
-			});
-		}, 10);
-	}
+	handleReset: null
 });
