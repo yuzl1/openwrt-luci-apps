@@ -2,6 +2,18 @@
 
 English | [简体中文](README.zh-cn.md)
 
+This repository is a small personal opkg feed for OpenWrt / ImmortalWrt 23.05.
+It publishes the following packages:
+
+| Package | Description |
+| --- | --- |
+| `luci-app-tailscale-community` | LuCI UI for the official `tailscale` package |
+| `luci-app-ddns-lite` | ddns-go style DDNS page that drives `ddns-scripts` (no Go runtime, tiny memory footprint) |
+
+Both are architecture independent (`Architecture: all`) and are published to
+the `gh-pages` branch as a normal opkg feed, together with a signed
+`Packages` index.
+
 Backport of the OpenWrt `luci-app-tailscale-community` LuCI application so it
 can be installed from opkg on 23.05 based firmware, including arm 32-bit
 targets such as the Redmi AX3000 (RA81).
@@ -114,6 +126,23 @@ Once the key is in place, keep `option check_signature` enabled in
 The matching **private** key is only used by the CI (repository secret
 `USIGN_SECRET`). Keep a backup of it somewhere safe: it is needed to sign
 future builds, and it must never be committed or shipped.
+
+## DDNS Lite
+
+`luci-app-ddns-lite` gives you the ddns-go workflow (pick a provider, enter
+the ID/token, list the domains) while keeping the tiny `ddns-scripts`
+implementation instead of a Go daemon.
+
+* *Services -> DDNS Lite*: choose the provider, credentials, the interface
+  (`pppoe-wan`), the domains, IPv4/IPv6 and the check interval
+* **Save & Apply** regenerates the matching `/etc/config/ddns` service
+  entries (marked `managed_by ddns-lite`) and restarts `ddns`
+* Entries created by hand with the normal ddns-scripts UI are left untouched
+
+Supported providers in the shipped dependency list: DNSPod/Tencent
+(`dnspod.cn`), Cloudflare and Aliyun. Adding more is a matter of installing
+the matching `ddns-scripts-*` package and adding a value to the provider
+list in the view.
 
 ## Rotating the feed signing key
 

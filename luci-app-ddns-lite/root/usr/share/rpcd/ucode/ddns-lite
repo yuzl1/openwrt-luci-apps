@@ -1,0 +1,112 @@
+#!/usr/bin/env ucode
+'use strict';
+
+import { cursor } from 'uci';
+import { popen } from 'fs';
+
+const uci = cursor();
+
+function sh(cmd) {
+	let out = '';
+	const p = popen(cmd, 'r');
+	if (p == null)
+		return '';
+	for (let line = p.read('line'); length(line); line = p.read('line'))
+		out += line + '\n';
+	return rtrim(out);
+}
+
+function opt(cfg, sid, key, value) {
+	if (value != null && value != '')
+		uci.set(cfg, sid, key, '' + value);
+}
+
+function add_service(domains, provider, username, password, iface, interval, ipv6) {
+	let count = 0;
+
+	for (let i = 0; i < length(domains); i++) {
+		const domain = trim(domains[i]);
+		if (!length(domain))
+			continue;
+
+		const sid = uci.add('ddns', 'service');
+
+		opt('ddns', sid, 'service_name', provider);
+		opt('ddns', sid, 'domain', domain);
+		opt('ddns', sid, 'lookup_host', domain);
+		opt('ddns', sid, 'username', username);
+		opt('ddns', sid, 'password', password);
+		opt('ddns', sid, 'interface', iface);
+		opt('ddns', sid, 'ip_source', 'network');
+		opt('ddns', sid, 'ip_network', iface);
+		opt('ddns', sid, 'check_interval', interval);
+		opt('ddns', sid, 'check_unit', 'minutes');
+		opt('ddns', sid, 'force_interval', '72');
+		opt('ddns', sid, 'force_unit', 'hours');
+		opt('ddns', sid, 'managed_by', 'ddns-lite');
+		opt('ddns', sid, 'enabled', '1');
+
+		if (ipv6)
+			opt('ddns', sid, 'use_ipv6', '1');
+
+		count++;
+	}
+
+	return count;
+}
+
+const methods = {};
+
+methods.status = {
+	call: function() {
+		const running = (sh('pidof dynamic_dns_updater.sh') != '');
+		const log = sh("logread 2>/dev/null | grep -i 'ddns' | tail -n 20");
+
+		return { running: running, log: log };
+	}
+};
+
+methods.apply = {
+	call: function() {
+		uci.load('ddns-lite');
+		uci.load('ddns');
+
+		const provider  = uci.get('ddns-lite', 'settings', 'provider')  || 'dnspod.cn';
+		const username  = uci.get('ddns-lite', 'settings', 'username')  || '';
+		const password  = uci.get('ddns-lite', 'settings', 'password')  || '';
+		const iface     = uci.get('ddns-lite', 'settings', 'interface') || 'pppoe-wan';
+		const domains   = uci.get('ddns-lite', 'settings', 'domains')   || [];
+		const ipv4      = (uci.get('ddns-lite', 'settings', 'ipv4') || '1') == '1';
+		const ipv6      = (uci.get('ddns-lite', 'settings', 'ipv6') || '0') == '1';
+		const interval  = uci.get('ddns-lite', 'settings', 'interval')  || '10';
+
+		if (!length(username) || !length(password))
+			return { ok: false, error: 'Account/ID and token/password are required.' };
+
+		if (length(domains) == 0)
+			return { ok: false, error: 'Add at least one domain.' };
+
+		if (!ipv4 && !ipv6)
+			return { ok: false, error: 'Enable IPv4 or IPv6 (or both).' };
+
+		/* Drop only the entries this app created, leave manual ddns-scripts ones alone. */
+		uci.foreach('ddns', 'service', function(s) {
+			if (s.managed_by == 'ddns-lite')
+				uci.delete('ddns', s['.name']);
+		});
+
+		let count = 0;
+		if (ipv4)
+			count += add_service(domains, provider, username, password, iface, interval, false);
+		if (ipv6)
+			count += add_service(domains, provider, username, password, iface, interval, true);
+
+		uci.commit('ddns');
+
+		const out = sh('/etc/init.d/ddns restart 2>&1');
+
+		return { ok: true, entries: count, output: out };
+	}
+};
+
+return methods;

@@ -2,6 +2,16 @@
 
 [English](README.md) | 简体中文
 
+本仓库是一个面向 OpenWrt / ImmortalWrt 23.05 的个人 opkg 软件源，目前包含：
+
+| 包 | 说明 |
+| --- | --- |
+| `luci-app-tailscale-community` | 官方 `tailscale` 包的 LuCI 界面 |
+| `luci-app-ddns-lite` | ddns-go 风格的 DDNS 页面，底层用 `ddns-scripts`（纯 shell，不额外跑 Go 进程，内存占用极小） |
+
+两个包都是 `Architecture: all`，构建后连同签名索引一起发布到 `gh-pages`
+分支，可以直接作为 opkg 源使用。
+
 把 OpenWrt 主线的 `luci-app-tailscale-community` 应用回移到 23.05 系列固件，
 可以用 opkg 安装，包含 arm 32 位目标（例如红米 AX3000 / RA81）。
 
@@ -208,6 +218,20 @@ git rm keys/<旧keyid>.pub
 ```
 
 注意：只信任旧公钥的设备会拒绝新签名，所以一定要**先装新公钥，再发布新签名**。
+
+## DDNS Lite
+
+`luci-app-ddns-lite` 用 ddns-go 的使用思路（选服务商、填 ID/Token、列域名），
+但底层复用 `ddns-scripts`，不额外跑 Go 进程，内存占用很小。
+
+* **服务 → DDNS Lite**：选服务商、填账号/ID 与 Token、选接口（`pppoe-wan`）、
+  填域名、选择 IPv4/IPv6、设置检查间隔
+* 点 **保存并应用** 会自动生成对应的 `/etc/config/ddns` 条目（带
+  `managed_by ddns-lite` 标记）并重启 `ddns` 服务
+* 通过原版 ddns-scripts 界面手工创建的条目不会被改动
+
+依赖里已经带了 DNSPod/腾讯云（`dnspod.cn`）、Cloudflare、阿里云三种服务商脚本；
+要支持更多服务商，装对应的 `ddns-scripts-*` 包并在页面选项里加一项即可。
 
 ## 不需要 SDK 的本地打包
 

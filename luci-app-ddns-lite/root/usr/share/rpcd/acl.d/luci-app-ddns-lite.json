@@ -1,0 +1,17 @@
+{
+	"luci-app-ddns-lite": {
+		"description": "Grant access to DDNS Lite",
+		"read": {
+			"ubus": {
+				"ddns-lite": [ "status" ]
+			},
+			"uci": [ "ddns-lite" ]
+		},
+		"write": {
+			"ubus": {
+				"ddns-lite": [ "apply" ]
+			},
+			"uci": [ "ddns-lite" ]
+		}
+	}
+}

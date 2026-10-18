@@ -1,0 +1,14 @@
+{
+	"admin/services/ddns-lite": {
+		"title": "DDNS Lite",
+		"order": 61,
+		"action": {
+			"type": "view",
+			"path": "ddns-lite"
+		},
+		"depends": {
+			"acl": [ "luci-app-ddns-lite" ],
+			"uci": { "ddns-lite": true }
+		}
+	}
+}
