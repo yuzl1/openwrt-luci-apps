@@ -50,6 +50,26 @@ function dnspod_domain(domain) {
 	return host + '@' + join(rest, '.');
 }
 
+/*
+ * ddns-scripts validates lookup_host against [@a-zA-Z0-9._-], so a wildcard
+ * cannot be used there. Fall back to the zone (or the last two labels) which
+ * is a valid, usually existing name to compare the current address with.
+ */
+function lookup_host_for(domain, ts_domain) {
+	if (length(domain) < 2 || substr(domain, 0, 2) != '*')
+		return domain;
+
+	const at = index(ts_domain, '@');
+	if (at >= 0 && length(ts_domain) > at + 1)
+		return substr(ts_domain, at + 1);
+
+	const parts = split(domain, '.');
+	if (length(parts) >= 2)
+		return join(slice(parts, length(parts) - 2), '.');
+
+	return domain;
+}
+
 function add_family(ipv6) {
 	const section = ipv6 ? 'ipv6' : 'ipv4';
 
@@ -73,10 +93,11 @@ function add_family(ipv6) {
 		const sid = uci.add('ddns', 'service');
 		const ts_domain = (provider == 'dnspod.cn' || provider == 'dnspod.com')
 			? dnspod_domain(domain) : domain;
+		const lookup_host = lookup_host_for(domain, ts_domain);
 
 		opt('ddns', sid, 'service_name', provider);
 		opt('ddns', sid, 'domain', ts_domain);
-		opt('ddns', sid, 'lookup_host', domain);
+		opt('ddns', sid, 'lookup_host', lookup_host);
 		opt('ddns', sid, 'username', username);
 		opt('ddns', sid, 'password', password);
 		opt('ddns', sid, 'check_interval', interval);
