@@ -224,7 +224,10 @@ api_error() {
 		[ -n "$response" ] || echo "empty API response"
 	else
 		code=$(printf '%s' "$response" | json_get '@.status.code')
-		if [ "$code" != "1" ]; then
+		# DNSPod legacy API returns code 10 ("record list is empty") when
+		# Record.List finds no matching record. That is a valid pre-create
+		# state, not an API failure.
+		if [ "$code" != "1" ] && [ "$code" != "10" ]; then
 			message=$(printf '%s' "$response" | json_get '@.status.message')
 			[ -n "$message" ] || message="invalid API response"
 			echo "$message"

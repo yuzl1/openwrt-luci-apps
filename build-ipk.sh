@@ -199,7 +199,7 @@ pack "$HERE" \
 	""
 
 pack "$HERE/luci-app-ddns-lite" \
-	luci-app-ddns-lite 1.0.2-1 \
+	luci-app-ddns-lite 1.0.3-1 \
 	"curl, jsonfilter, luci-base, rpcd-mod-ucode, ucode, ucode-mod-fs, ucode-mod-uci, ucode-mod-ubus" \
 	"LuCI DDNS Lite" \
 	"Standalone DNSPod updater with legacy token and Tencent Cloud TC3 authentication." \

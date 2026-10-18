@@ -240,6 +240,7 @@ git rm keys/<旧keyid>.pub
 * 直接调用 DNSPod 的 `Record.List`、`Record.Create`、`Record.Modify`；
   成功更新和 API 错误都会显示在页面日志中
 * 每轮日志会逐条列出域名和当前 IP，包括记录本来就正确、无需修改的情况
+* 旧版 DNSPod 返回代码 `10`（记录列表为空）时继续创建记录，不再误判为失败
 * `1.0.1` 修复 BusyBox 1.36 的 `tr [:upper:] [:lower:]`
   兼容问题；旧实现会把 `ipv4.yu1998.com` 错写成
   `iwv4.yl1998.com`

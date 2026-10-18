@@ -150,6 +150,8 @@ or depends on `ddns-scripts`, and its version sequence restarted at `1.0.0`.
   directly and records failures in `logread -e ddns-lite`
 * every run logs each configured domain together with its active address,
   including when the DNSPod value was already correct
+* legacy DNSPod response code `10` is treated as an empty record list, allowing
+  the first AAAA record to be created automatically
 * `1.0.1` removes a locale-sensitive `tr [:upper:] [:lower:]` dependency that
   could corrupt lowercase domain names on BusyBox 1.36
 * legacy Token mode needs only `curl` and `jsonfilter`; Tencent Cloud TC3 mode

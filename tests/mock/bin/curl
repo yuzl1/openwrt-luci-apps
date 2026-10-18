@@ -27,7 +27,7 @@ def legacy():
         sub = next((item.split("=", 1)[1] for item in data if item.startswith("sub_domain=")), "")
         if sub == "ipv4":
             return {"status": {"code": "1"}, "records": [{"id": "101", "value": current_ip, "line_id": "0"}]}
-        return {"status": {"code": "1"}, "records": []}
+        return {"status": {"code": "10", "message": "记录列表为空"}}
     return {"status": {"code": "1"}, "domains": [{"name": "yu1998.com"}]}
 
 
