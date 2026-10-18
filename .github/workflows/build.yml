@@ -25,10 +25,24 @@ jobs:
           chmod +x tests/test-ddns-lite.sh tests/mock/bin/*
           tests/test-ddns-lite.sh
 
-      - name: Build the architecture independent package
+      - name: Build the architecture independent packages
         run: |
           chmod +x build-ipk.sh
           ./build-ipk.sh
+
+      - name: Set up Go for Tailscale
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
+
+      - name: Build Tailscale ARMv7 core
+        run: |
+          chmod +x build-tailscale.sh
+          ./build-tailscale.sh
+
+      - name: Generate package index
+        run: |
           python3 build-index.py dist
           ls -l dist
 

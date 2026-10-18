@@ -8,6 +8,7 @@ It publishes the following packages:
 | Package | Description |
 | --- | --- |
 | `luci-app-tailscale-community` | LuCI UI for the official `tailscale` package |
+| `tailscale` | current upstream Tailscale daemon cross-built for the Redmi AX3000 ARMv7 target |
 | `luci-app-ddns-lite` | standalone DNSPod DDNS updater with legacy Token and Tencent Cloud TC3 authentication |
 
 Both are architecture independent (`Architecture: all`) and are published to

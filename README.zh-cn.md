@@ -7,6 +7,7 @@
 | 包 | 说明 |
 | --- | --- |
 | `luci-app-tailscale-community` | 官方 `tailscale` 包的 LuCI 界面 |
+| `tailscale` | 为红米 AX3000 ARMv7 交叉构建的当前上游 Tailscale 守护进程 |
 | `luci-app-ddns-lite` | 独立 DNSPod DDNS 客户端，支持旧版 Token 和腾讯云 TC3 签名 |
 
 两个包都是 `Architecture: all`，构建后连同签名索引一起发布到 `gh-pages`

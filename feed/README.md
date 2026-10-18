@@ -33,6 +33,7 @@ usign -F -p /etc/opkg/keys/776cc6b50a033ebf     # 输出 776cc6b50a033ebf
 | 包 | 说明 |
 | --- | --- |
 | `luci-app-tailscale-community` | 官方 `tailscale` 包的 LuCI 界面（状态、登录、子网路由、监听端口） |
+| `tailscale` | 红米 AX3000 ARMv7 的当前上游 Tailscale 静态守护进程 |
 | `luci-app-ddns-lite` | 独立 DNSPod DDNS 客户端，支持旧版 Token 与腾讯云 TC3 签名，不依赖 ddns-scripts |
 
 ## 常用命令
