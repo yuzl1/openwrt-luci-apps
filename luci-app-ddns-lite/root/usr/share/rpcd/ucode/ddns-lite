@@ -26,6 +26,18 @@ function get(section, option, fallback) {
 	return (value == null || value == '') ? fallback : value;
 }
 
+function join_dots(parts) {
+	let out = '';
+
+	for (let i = 0; i < length(parts); i++) {
+		if (i > 0)
+			out += '.';
+		out += parts[i];
+	}
+
+	return out;
+}
+
 /*
  * dnspod.cn expects "host@zone" (e.g. ipv4@yu1998.com). ddns-scripts itself
  * only splits at the first dot, which breaks wildcards on sub-domains such as
@@ -47,7 +59,7 @@ function dnspod_domain(domain) {
 		rest = slice(rest, 1);
 	}
 
-	return host + '@' + join(rest, '.');
+	return host + '@' + join_dots(rest);
 }
 
 /*
@@ -65,7 +77,7 @@ function lookup_host_for(domain, ts_domain) {
 
 	const parts = split(domain, '.');
 	if (length(parts) >= 2)
-		return join(slice(parts, length(parts) - 2), '.');
+		return join_dots(slice(parts, length(parts) - 2));
 
 	return domain;
 }
