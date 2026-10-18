@@ -13,7 +13,7 @@ LUCI_URL:=https://github.com/openwrt/luci/tree/master/applications/luci-app-tail
 LUCI_DESCRIPTION:=Web management interface for Tailscale: status, login/logout, settings and subnet routes.
 PKG_DESCRIPTION:=$(LUCI_DESCRIPTION)
 PKG_MAINTAINER:=yuzl1
-PKG_VERSION:=1.0.1
+PKG_VERSION:=1.0.2
 PKG_RELEASE:=1
 
 LUCI_DEPENDS:=+tailscale +ip-full +luci-base +rpcd-mod-ucode +ucode +ucode-mod-fs +ucode-mod-uci +ucode-mod-ubus
