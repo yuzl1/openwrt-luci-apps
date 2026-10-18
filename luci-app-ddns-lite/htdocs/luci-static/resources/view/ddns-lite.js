@@ -9,6 +9,7 @@
 const callApply = rpc.declare({ object: 'ddns-lite', method: 'apply' });
 const callStatus = rpc.declare({ object: 'ddns-lite', method: 'status' });
 const callProviders = rpc.declare({ object: 'ddns-lite', method: 'providers' });
+const callInterfaces = rpc.declare({ object: 'ddns-lite', method: 'interfaces' });
 
 const V4_URLS = 'https://myip.ipip.net https://ddns.oray.com/checkip ' +
 	'https://ip.3322.net https://4.ipw.cn https://v4.yinghualuo.cn/bejson';
@@ -38,7 +39,27 @@ const PROVIDER_LABELS = {
 	'dynv6.com': 'dynv6'
 };
 
-function familyOptions(s, family, defaultUrls, defaultSource) {
+function fillList(o, items, fallbacks) {
+	const seen = {};
+
+	(items || []).forEach(function(item) {
+		const name = (typeof item === 'string') ? item : item.name;
+		const label = (typeof item === 'string') ? item : (item.label || item.name);
+		if (!name || seen[name])
+			return;
+		seen[name] = true;
+		o.value(name, label);
+	});
+
+	(fallbacks || []).forEach(function(name) {
+		if (seen[name])
+			return;
+		seen[name] = true;
+		o.value(name, name);
+	});
+}
+
+function familyOptions(s, family, defaultUrls, defaultSource, networks, devices) {
 	let o;
 
 	o = s.option(form.Flag, 'enabled', _('Enable'));
@@ -59,15 +80,17 @@ function familyOptions(s, family, defaultUrls, defaultSource) {
 	o.rows = 3;
 	o.depends('source', 'web');
 
-	o = s.option(form.Value, 'network', _('Logical interface'),
-		_('OpenWrt interface name, e.g. pppoe-wan or wan6.'));
-	o.default = 'pppoe-wan';
+	o = s.option(form.ListValue, 'network', _('Logical interface'),
+		_('OpenWrt logical interface (network.interface.*).'));
 	o.depends('source', 'network');
-
-	o = s.option(form.Value, 'interface', _('Network device'),
-		_('Device name, e.g. br-lan, pppoe-wan or tailscale0.'));
+	fillList(o, networks, ['pppoe-wan', 'wan', 'wan6', 'lan']);
 	o.default = 'pppoe-wan';
+
+	o = s.option(form.ListValue, 'interface', _('Network device'),
+		_('Linux network device with its current address.'));
 	o.depends('source', 'interface');
+	fillList(o, devices, ['pppoe-wan', 'br-lan']);
+	o.default = 'pppoe-wan';
 
 	o = s.option(form.Value, 'script', _('Command'),
 		_('Only stdout is used; the first matching address is taken.'));
@@ -83,13 +106,17 @@ return view.extend({
 	load: function() {
 		return Promise.all([
 			uci.load('ddns-lite'),
-			L.resolveDefault(callProviders(), {})
+			L.resolveDefault(callProviders(), {}),
+			L.resolveDefault(callInterfaces(), {})
 		]);
 	},
 
 	render: function(data) {
 		let m, s, o;
 		const providers = (data && data[1] && data[1].providers) || [];
+		const ifaces = (data && data[2]) || {};
+		const networks = ifaces.networks || [];
+		const devices = ifaces.devices || [];
 
 		m = new form.Map('ddns-lite', _('DDNS Lite'),
 			_('Lightweight DDNS built on ddns-scripts: pick a provider, enter the credentials, then describe how IPv4 and IPv6 are obtained.'));
@@ -129,10 +156,10 @@ return view.extend({
 		};
 
 		s = m.section(form.NamedSection, 'ipv4', 'ipv4', _('IPv4 (A record)'));
-		familyOptions(s, 'ipv4', V4_URLS, 'web');
+		familyOptions(s, 'ipv4', V4_URLS, 'web', networks, devices);
 
 		s = m.section(form.NamedSection, 'ipv6', 'ipv6', _('IPv6 (AAAA record)'));
-		familyOptions(s, 'ipv6', V6_URLS, 'interface');
+		familyOptions(s, 'ipv6', V6_URLS, 'interface', networks, devices);
 
 		map = m;
 		return m.render();
