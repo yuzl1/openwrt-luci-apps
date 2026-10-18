@@ -44,7 +44,7 @@ prebuilt architecture independent package:
 
 ```sh
 opkg install tailscale ip-full
-opkg install luci-app-tailscale-community_1.0.1-1_all.ipk
+opkg install luci-app-tailscale-community_1.0.2-1_all.ipk
 ```
 
 Then open `http://<router>/cgi-bin/luci/admin/services/tailscale`.
@@ -157,6 +157,10 @@ opkg install ddns-scripts_aliyun        # Aliyun DNS
 
 The provider list in the page only shows services that are installed (it
 reads `/usr/share/ddns/default/*.json`), so nothing extra is pulled in.
+
+> **Note**: installing or upgrading a package restarts `rpcd` when its ucode
+> RPC plugin changed, which closes the current LuCI session - simply log in
+> again afterwards. Page-only updates skip the restart.
 
 ## Rotating the feed signing key
 

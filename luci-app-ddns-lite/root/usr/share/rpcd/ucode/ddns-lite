@@ -119,44 +119,6 @@ methods.providers = {
 	}
 };
 
-methods.interfaces = {
-	call: function() {
-		const networks = [];
-		const devices = [];
-
-		const nets = sh("ubus list 'network.interface.*' 2>/dev/null | sed 's/^network.interface.//'");
-		if (length(nets)) {
-			const lines = split(nets, '\n');
-			for (let i = 0; i < length(lines); i++) {
-				const name = trim(lines[i]);
-				if (length(name))
-					push(networks, { name: name, label: name });
-			}
-		}
-
-		const devs = sh("ls -1 /sys/class/net 2>/dev/null");
-		if (length(devs)) {
-			const lines = split(devs, '\n');
-			for (let i = 0; i < length(lines); i++) {
-				const dev = trim(lines[i]);
-				if (!length(dev) || dev == 'lo')
-					continue;
-
-				let addr = sh("ip -4 -o addr show dev " + dev + " 2>/dev/null | awk '{print $4}' | head -n1");
-				if (!length(addr))
-					addr = sh("ip -6 -o addr show dev " + dev + " scope global 2>/dev/null | awk '{print $4}' | head -n1");
-
-				push(devices, {
-					name: dev,
-					label: length(addr) ? (dev + '[' + addr + ']') : dev
-				});
-			}
-		}
-
-		return { networks: networks, devices: devices };
-	}
-};
-
 methods.status = {
 	call: function() {
 		const running = (sh('pidof dynamic_dns_updater.sh') != '');

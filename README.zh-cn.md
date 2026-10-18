@@ -49,7 +49,7 @@ http://<路由器IP>/cgi-bin/luci/admin/services/tailscale
 
 ```sh
 opkg update
-opkg install /tmp/luci-app-tailscale-community_1.0.1-1_all.ipk
+opkg install /tmp/luci-app-tailscale-community_1.0.2-1_all.ipk
 ```
 
 缺 `tailscale`、`ip-full` 等依赖时会自动从源里装。
@@ -245,6 +245,10 @@ opkg install ddns-scripts_aliyun        # 阿里云
 
 页面里的服务商列表只显示已安装的服务（读取 `/usr/share/ddns/default/*.json`），
 没装的自然不会出现，也不会被顺带装上。
+
+> **注意**：安装/升级时如果 ucode 的 RPC 脚本有变化，会重启一次 `rpcd`，
+> 这会把当前 LuCI 登录会话失效（提示“会话已过期”），重新登录即可；
+> 只更新页面等不涉及 RPC 的版本不会重启，也就不会掉登录。
 
 ## 不需要 SDK 的本地打包
 

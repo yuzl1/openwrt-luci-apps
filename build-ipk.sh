@@ -61,12 +61,23 @@ pack() {
 	cat > "$stage/control/postinst" <<'EOF'
 #!/bin/sh
 [ -n "$IPKG_INSTROOT" ] && exit 0
-chown -R root:root /www/luci-static /usr/share/luci /usr/share/rpcd /etc/config 2>/dev/null
 if [ -x /etc/init.d/tailscale-settings ]; then
 	/etc/init.d/tailscale-settings enable 2>/dev/null
 	/etc/init.d/tailscale-settings restart 2>/dev/null || /etc/init.d/tailscale-settings start 2>/dev/null
 fi
-/etc/init.d/rpcd restart 2>/dev/null
+
+# rpcd loads ucode plugins at startup, so it only needs a restart when one of
+# them actually changed. Restarting it drops every LuCI login session, so a
+# checksum is kept and the restart is skipped otherwise.
+changed=0
+for f in /usr/share/rpcd/ucode/*; do
+	[ -f "$f" ] || continue
+	sum=$(md5sum "$f" 2>/dev/null | cut -d' ' -f1)
+	marker="/usr/share/luci/.rpcd-$(basename "$f").md5"
+	[ "$sum" = "$(cat "$marker" 2>/dev/null)" ] || { echo "$sum" > "$marker"; changed=1; }
+done
+[ "$changed" = "1" ] && /etc/init.d/rpcd restart 2>/dev/null
+
 rm -f /tmp/luci-indexcache*
 exit 0
 EOF
@@ -136,14 +147,14 @@ PYEOF
 #
 
 pack "$HERE" \
-	luci-app-tailscale-community 1.0.1-1 \
+	luci-app-tailscale-community 1.0.2-1 \
 	"tailscale, ip-full, luci-base, rpcd-mod-ucode, ucode, ucode-mod-fs, ucode-mod-uci, ucode-mod-ubus" \
 	"LuCI support for Tailscale" \
 	"Web management interface for Tailscale: status, login/logout, settings and subnet routes." \
 	""
 
 pack "$HERE/luci-app-ddns-lite" \
-	luci-app-ddns-lite 1.3.0-1 \
+	luci-app-ddns-lite 1.4.0-1 \
 	"ddns-scripts, ddns-scripts-services, curl, luci-base, rpcd-mod-ucode, ucode, ucode-mod-fs, ucode-mod-uci, ucode-mod-ubus" \
 	"LuCI DDNS Lite" \
 	"Simple ddns-go style UI that generates ddns-scripts entries." \
