@@ -27,4 +27,9 @@ run_case token
 run_case tc3
 TEST_ROOT_DOMAIN=yu1998.com run_case token-override
 
+if grep -q "tr '\\[:upper:\\]' '\\[:lower:\\]'" "$UPDATE"; then
+	echo "case conversion must not depend on BusyBox tr" >&2
+	exit 1
+fi
+
 echo "ddns-lite tests passed"

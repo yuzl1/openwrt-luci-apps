@@ -42,7 +42,7 @@ const methods = {};
 methods.status = {
 	call: function() {
 		const running = (sh("pgrep -f '/usr/bin/ddns-lite-update daemon$' 2>/dev/null") != '');
-		const log = sh("logread 2>/dev/null | grep -i 'ddns-lite\\[' | tail -n 20");
+		const log = sh("logread 2>/dev/null | grep -i 'ddns-lite' | tail -n 20");
 
 		return { running: running, log: log };
 	}

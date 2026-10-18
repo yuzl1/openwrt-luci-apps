@@ -126,7 +126,7 @@ tc3_api() {
 	local signing_key signature authorization
 
 	timestamp=$(date +%s)
-	action_lc=$(printf '%s' "$action" | tr '[:upper:]' '[:lower:]')
+	action_lc=$(printf '%s' "$action" | awk '{print tolower($0)}')
 	payload_hash=$(printf '%s' "$payload" | sha256_hex)
 	signed_headers='content-type;host;x-tc-action;x-tc-timestamp;x-tc-version'
 
@@ -267,7 +267,7 @@ load_zones() {
 resolve_target() {
 	local domain="$1" sub zone candidate best
 
-	domain=$(printf '%s' "$domain" | tr '[:upper:]' '[:lower:]')
+	domain=$(printf '%s' "$domain" | awk '{print tolower($0)}')
 	domain=${domain%.}
 
 	case "$domain" in
@@ -405,7 +405,7 @@ do_update() {
 
 	AUTH_MODE=$(cfg settings.auth_mode)
 	[ -n "$AUTH_MODE" ] || AUTH_MODE=token
-	ROOT_DOMAIN=$(cfg settings.root_domain | tr '[:upper:]' '[:lower:]')
+	ROOT_DOMAIN=$(cfg settings.root_domain | awk '{print tolower($0)}')
 	ROOT_DOMAIN=${ROOT_DOMAIN%.}
 	DNSPOD_ZONES=
 

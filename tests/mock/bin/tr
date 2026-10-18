@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ "$*" = "[:upper:] [:lower:]" ]; then
+	# Reproduce the broken BusyBox 1.36 mapping seen on the RA81 firmware.
+	exec sed 's/p/w/g; s/u/l/g'
+fi
+
+exec /usr/bin/tr "$@"

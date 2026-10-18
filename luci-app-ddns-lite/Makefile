@@ -7,7 +7,7 @@ LUCI_TITLE:=LuCI DDNS Lite (standalone DNSPod)
 LUCI_DESCRIPTION:=Standalone DNSPod updater with legacy token and Tencent Cloud TC3 authentication.
 PKG_DESCRIPTION:=$(LUCI_DESCRIPTION)
 PKG_MAINTAINER:=yuzl1
-PKG_VERSION:=1.0.0
+PKG_VERSION:=1.0.1
 PKG_RELEASE:=1
 
 LUCI_DEPENDS:=+curl +jsonfilter +luci-base +rpcd-mod-ucode \
