@@ -66,6 +66,29 @@ function actionButton(label, action, style) {
 	}, label);
 }
 
+function attachProviderFilter() {
+	const filter = document.getElementById('ddns_provider_filter');
+	if (!filter || filter.getAttribute('data-bound') === '1')
+		return;
+
+	const select = document.querySelector('select[id$=".provider"]');
+	if (!select)
+		return;
+
+	filter.setAttribute('data-bound', '1');
+	filter.addEventListener('input', function() {
+		const q = this.value.trim().toLowerCase();
+
+		Array.prototype.forEach.call(select.options, function(opt) {
+			const match = !q ||
+				String(opt.value).toLowerCase().indexOf(q) >= 0 ||
+				opt.text.toLowerCase().indexOf(q) >= 0;
+			opt.hidden = !match;
+			opt.style.display = match ? '' : 'none';
+		});
+	});
+}
+
 function refreshStatus() {
 	return L.resolveDefault(callStatus(), {}).then(function(status) {
 		const el = document.getElementById('ddns_lite_status');
@@ -196,6 +219,24 @@ return view.extend({
 
 		s = m.section(form.NamedSection, 'settings', 'settings', _('Account'));
 
+		o = s.option(form.DummyValue, '_provider_filter', _('Find provider'));
+		o.rawhtml = true;
+		o.render = function() {
+			return E('div', { 'class': 'cbi-value' }, [
+				E('label', { 'class': 'cbi-value-title', 'for': 'ddns_provider_filter' }, _('Find provider')),
+				E('div', { 'class': 'cbi-value-field' }, [
+					E('input', {
+						'type': 'text',
+						'id': 'ddns_provider_filter',
+						'class': 'cbi-input-text',
+						'placeholder': _('Type to filter the provider list')
+					}),
+					E('div', { 'class': 'cbi-value-description' },
+						_('Filters the DNS provider list below without changing the selection.'))
+				])
+			]);
+		};
+
 		o = s.option(form.ListValue, 'provider', _('DNS provider'));
 		providers.forEach(function(p) {
 			o.value(p, PROVIDER_LABELS[p] || p);
@@ -245,6 +286,7 @@ return view.extend({
 		const rendered = m.render();
 
 		window.setTimeout(refreshStatus, 200);
+		window.setTimeout(attachProviderFilter, 300);
 		poll.add(refreshStatus, 10);
 
 		return rendered;
