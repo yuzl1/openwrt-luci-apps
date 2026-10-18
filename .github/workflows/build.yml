@@ -37,6 +37,7 @@ jobs:
         run: |
           mkdir -p publish
           cp dist/*.ipk dist/Packages dist/Packages.gz publish/
+          cp feed/README.md publish/README.md
           ls -l publish
 
       - name: Build usign
