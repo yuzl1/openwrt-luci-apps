@@ -33,7 +33,7 @@ usign -F -p /etc/opkg/keys/776cc6b50a033ebf     # 输出 776cc6b50a033ebf
 | 包 | 说明 |
 | --- | --- |
 | `luci-app-tailscale-community` | 官方 `tailscale` 包的 LuCI 界面（状态、登录、子网路由、监听端口） |
-| `luci-app-ddns-lite` | ddns-go 风格的 DDNS 页面，底层用 `ddns-scripts`，服务商脚本按需安装 |
+| `luci-app-ddns-lite` | 独立 DNSPod DDNS 客户端，支持旧版 Token 与腾讯云 TC3 签名，不依赖 ddns-scripts |
 
 ## 常用命令
 
@@ -42,7 +42,7 @@ opkg update
 opkg list | grep -E 'luci-app-(tailscale|ddns)'
 opkg install luci-app-tailscale-community
 opkg install luci-app-ddns-lite
-opkg install ddns-scripts-dnspod     # 只装你要用的服务商脚本
+opkg install openssl-util            # 只有腾讯云 TC3 模式才需要
 ```
 
 安装后在 LuCI 里：

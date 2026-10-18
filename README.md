@@ -1,4 +1,4 @@
-# luci-app-tailscale-community for OpenWrt / ImmortalWrt 23.05
+# yuzl1 OpenWrt LuCI apps feed
 
 English | [简体中文](README.zh-cn.md)
 
@@ -8,7 +8,7 @@ It publishes the following packages:
 | Package | Description |
 | --- | --- |
 | `luci-app-tailscale-community` | LuCI UI for the official `tailscale` package |
-| `luci-app-ddns-lite` | ddns-go style DDNS page that drives `ddns-scripts` (no Go runtime, tiny memory footprint) |
+| `luci-app-ddns-lite` | standalone DNSPod DDNS updater with legacy Token and Tencent Cloud TC3 authentication |
 
 Both are architecture independent (`Architecture: all`) and are published to
 the `gh-pages` branch as a normal opkg feed, together with a signed
@@ -129,12 +129,11 @@ future builds, and it must never be committed or shipped.
 
 ## DDNS Lite
 
-`luci-app-ddns-lite` gives you the ddns-go workflow (pick a provider, enter
-the ID/token, list the domains) while keeping the tiny `ddns-scripts`
-implementation instead of a Go daemon.
+`luci-app-ddns-lite` is now a standalone DNSPod client. It no longer generates
+or depends on `ddns-scripts`, and its version sequence restarted at `1.0.0`.
 
-* *Services -> DDNS Lite*: choose the provider, enter the credentials and the
-  check interval
+* *Services -> DDNS Lite*: choose legacy DNSPod Token or Tencent Cloud
+  SecretId/SecretKey authentication and set the check interval
 * IPv4 and IPv6 are configured separately, each with one of four IP sources:
   logical interface (`network`), network device (`interface`), URL check
   (`web`) or a command (`script`)
@@ -142,28 +141,29 @@ implementation instead of a Go daemon.
   `ip.3322.net`, `4.ipw.cn`, `v4.yinghualuo.cn/bejson`
 * built-in IPv6 check URLs: `speed.neu6.edu.cn/getIP.php`, `v6.ident.me`,
   `6.ipw.cn`, `v6.yinghualuo.cn/bejson`
-* wildcard records are accepted as `*.example.com`; for a wildcard on a
-  sub-domain (`*.ipv4.example.com`) the DNSPod `*.ipv4@example.com` form is
-  generated automatically, and `host@zone.tld` can be entered explicitly
-* **Save & Apply** regenerates the matching `/etc/config/ddns` service
-  entries (marked `managed_by ddns-lite`) and restarts `ddns`
-* Entries created by hand with the normal ddns-scripts UI are left untouched
+* the root zone is detected from the DNSPod account, so both
+  `*.ipv4.example.com` and `ipv4.example.com` work without manually writing
+  `host@zone`; an explicit `host@zone.tld` is also accepted
+* an optional **Root domain** field lets you enter `example.com` directly and
+  skip zone auto-detection entirely
+* the updater calls `Record.List`, `Record.Create`, and `Record.Modify`
+  directly and records failures in `logread -e ddns-lite`
+* legacy Token mode needs only `curl` and `jsonfilter`; Tencent Cloud TC3 mode
+  additionally requires `openssl-util` (`opkg install openssl-util`)
+* upgrading from `1.7.x` removes only old `/etc/config/ddns` entries marked
+  `managed_by ddns-lite`; manually created ddns-scripts entries are untouched
 
-Providers are **not** bundled: install only the `ddns-scripts-*` package for
-the service you actually use.
+Because the independent implementation deliberately restarted at `1.0.0`,
+opkg considers it older than `1.7.x`. After refreshing the feed, force this
+one downgrade so the configuration is kept:
 
 ```sh
-opkg install ddns-scripts-dnspod        # DNSPod / Tencent DNS
-opkg install ddns-scripts-cloudflare    # Cloudflare
-opkg install ddns-scripts_aliyun        # Aliyun DNS
+opkg update
+opkg install --force-downgrade luci-app-ddns-lite
 ```
 
-The provider list in the page only shows services that are installed (it
-reads `/usr/share/ddns/default/*.json`), so nothing extra is pulled in.
-
-> **Note**: installing or upgrading a package restarts `rpcd` when its ucode
-> RPC plugin changed, which closes the current LuCI session - simply log in
-> again afterwards. Page-only updates skip the restart.
+> `rpcd` is reloaded instead of restarted after an RPC-plugin update, so the
+> current LuCI login session should remain valid.
 
 ## Rotating the feed signing key
 

@@ -20,6 +20,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Test the standalone DDNS updater
+        run: |
+          chmod +x tests/test-ddns-lite.sh tests/mock/bin/*
+          tests/test-ddns-lite.sh
+
       - name: Build the architecture independent package
         run: |
           chmod +x build-ipk.sh
@@ -30,7 +35,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-tailscale-community-ipk
+          name: openwrt-luci-apps-ipk
           path: |
             dist/*.ipk
             dist/Packages

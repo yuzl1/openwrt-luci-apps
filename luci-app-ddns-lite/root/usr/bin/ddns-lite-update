@@ -1,0 +1,486 @@
+#!/bin/sh
+#
+# Standalone DNSPod DDNS updater for ddns-lite.
+#
+# Authentication modes:
+#   token - legacy DNSPod API token (login_token)
+#   tc3   - Tencent Cloud API SecretId/SecretKey (TC3-HMAC-SHA256)
+#
+
+NAME=ddns-lite
+API_BASE=${DNSPOD_API_BASE:-https://dnsapi.cn}
+TC3_HOST=${TENCENT_DNSPOD_HOST:-dnspod.tencentcloudapi.com}
+TC3_VERSION=2021-03-23
+
+AUTH_MODE=
+DNSPOD_ID=
+DNSPOD_TOKEN=
+SECRET_ID=
+SECRET_KEY=
+ROOT_DOMAIN=
+DNSPOD_ZONES=
+
+log() {
+	logger -t "$NAME" "$*"
+}
+
+cfg() {
+	uci -q get "ddns-lite.$1" 2>/dev/null
+}
+
+extract_v4() {
+	grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n 1
+}
+
+extract_v6() {
+	grep -Eo '([0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}' |
+		grep ':' | head -n 1
+}
+
+get_ip() {
+	local fam="$1" section="$2" src net ifc urls cmd got u
+
+	src=$(cfg "$section.source")
+	[ -n "$src" ] || src=network
+
+	case "$src" in
+	network)
+		net=$(cfg "$section.network")
+		[ -n "$net" ] || net=wan
+		if [ "$fam" = "4" ]; then
+			ubus call "network.interface.$net" status 2>/dev/null |
+				jsonfilter -e '@["ipv4-address"][0].address' 2>/dev/null
+		else
+			ubus call "network.interface.$net" status 2>/dev/null |
+				jsonfilter -e '@["ipv6-address"][0].address' 2>/dev/null
+		fi
+		;;
+	interface)
+		ifc=$(cfg "$section.interface")
+		[ -n "$ifc" ] || ifc=pppoe-wan
+		if [ "$fam" = "4" ]; then
+			ip -4 -o addr show dev "$ifc" 2>/dev/null |
+				awk '{print $4}' | cut -d/ -f1 | head -n 1
+		else
+			ip -6 -o addr show dev "$ifc" scope global 2>/dev/null |
+				awk '{print $4}' | cut -d/ -f1 | head -n 1
+		fi
+		;;
+	web)
+		urls=$(cfg "$section.url")
+		for u in $urls; do
+			if [ "$fam" = "4" ]; then
+				got=$(curl -fsSL --connect-timeout 8 --max-time 15 "$u" 2>/dev/null |
+					extract_v4)
+			else
+				got=$(curl -fsSL --connect-timeout 8 --max-time 15 "$u" 2>/dev/null |
+					extract_v6)
+			fi
+			[ -n "$got" ] && { echo "$got"; return 0; }
+		done
+		;;
+	script)
+		cmd=$(cfg "$section.script")
+		[ -n "$cmd" ] || return 1
+		if [ "$fam" = "4" ]; then
+			sh -c "$cmd" 2>/dev/null | extract_v4
+		else
+			sh -c "$cmd" 2>/dev/null | extract_v6
+		fi
+		;;
+	esac
+}
+
+json_get() {
+	jsonfilter -e "$1" 2>/dev/null
+}
+
+legacy_api() {
+	local path="$1"
+	shift
+
+	curl -sS --connect-timeout 10 --max-time 30 \
+		--retry 1 --retry-delay 1 \
+		-X POST "$API_BASE/$path" \
+		--data-urlencode "login_token=$DNSPOD_ID,$DNSPOD_TOKEN" \
+		--data-urlencode "format=json" \
+		--data-urlencode "lang=cn" "$@"
+}
+
+sha256_hex() {
+	openssl dgst -sha256 -binary | od -An -tx1 | tr -d ' \n'
+}
+
+hmac_hex() {
+	local key="$1" data="$2"
+
+	printf '%s' "$data" |
+		openssl dgst -sha256 -mac HMAC -macopt "hexkey:$key" |
+		awk '{print $NF}'
+}
+
+tc3_api() {
+	local action="$1" payload="$2"
+	local timestamp action_lc payload_hash canonical_request signed_headers
+	local date scope string_to_sign secret_date secret_service
+	local signing_key signature authorization
+
+	timestamp=$(date +%s)
+	action_lc=$(printf '%s' "$action" | tr '[:upper:]' '[:lower:]')
+	payload_hash=$(printf '%s' "$payload" | sha256_hex)
+	signed_headers='content-type;host;x-tc-action;x-tc-timestamp;x-tc-version'
+
+	canonical_request="POST
+/
+
+content-type:application/json; charset=utf-8
+host:$TC3_HOST
+x-tc-action:$action_lc
+x-tc-timestamp:$timestamp
+x-tc-version:$TC3_VERSION
+
+$signed_headers
+$payload_hash"
+
+	date=$(date -u -d "@$timestamp" +%Y-%m-%d 2>/dev/null)
+	[ -n "$date" ] || date=$(date -u +%Y-%m-%d)
+	scope="$date/dnspod/tc3_request"
+	string_to_sign="TC3-HMAC-SHA256
+$timestamp
+$scope
+$(printf '%s' "$canonical_request" | sha256_hex)"
+
+	secret_date=$(printf '%s' "$date" |
+		openssl dgst -sha256 -mac HMAC \
+			-macopt "key:TC3$SECRET_KEY" | awk '{print $NF}')
+	secret_service=$(hmac_hex "$secret_date" "dnspod")
+	signing_key=$(hmac_hex "$secret_service" "tc3_request")
+	signature=$(hmac_hex "$signing_key" "$string_to_sign")
+	authorization="TC3-HMAC-SHA256 Credential=$SECRET_ID/$scope, SignedHeaders=$signed_headers, Signature=$signature"
+
+	curl -sS --connect-timeout 10 --max-time 30 \
+		--retry 1 --retry-delay 1 \
+		-X POST "https://$TC3_HOST" \
+		-H "Authorization: $authorization" \
+		-H 'Content-Type: application/json; charset=utf-8' \
+		-H "X-TC-Action: $action" \
+		-H "X-TC-Timestamp: $timestamp" \
+		-H "X-TC-Version: $TC3_VERSION" \
+		--data-binary "$payload"
+}
+
+api_call() {
+	local action="$1" payload="$2"
+
+	if [ "$AUTH_MODE" = "tc3" ]; then
+		tc3_api "$action" "$payload"
+	else
+		case "$action" in
+		Domain.List)
+			legacy_api Domain.List \
+				--data-urlencode "offset=0"
+			;;
+		Record.List)
+			legacy_api Record.List \
+				--data-urlencode "domain=${payload%%|*}" \
+				--data-urlencode "sub_domain=${payload#*|}" \
+				--data-urlencode "record_type=${3:-A}"
+			;;
+		Record.Create)
+			legacy_api "$action" \
+				--data-urlencode "domain=${payload%%|*}" \
+				--data-urlencode "sub_domain=${payload#*|}" \
+				--data-urlencode "record_type=${3:-A}" \
+				--data-urlencode "record_line_id=${4:-0}" \
+				--data-urlencode "value=${5:-}" \
+				--data-urlencode "ttl=${6:-600}"
+			;;
+		Record.Modify)
+			legacy_api "$action" \
+				--data-urlencode "domain=${payload%%|*}" \
+				--data-urlencode "sub_domain=${payload#*|}" \
+				--data-urlencode "record_type=${3:-A}" \
+				--data-urlencode "record_line_id=${4:-0}" \
+				--data-urlencode "value=${5:-}" \
+				--data-urlencode "ttl=${6:-600}" \
+				--data-urlencode "record_id=${7:-}"
+			;;
+		esac
+	fi
+}
+
+api_error() {
+	local response="$1" code message
+
+	if [ "$AUTH_MODE" = "tc3" ]; then
+		message=$(printf '%s' "$response" |
+			json_get '@.Response.Error.Message')
+		if [ -n "$message" ]; then
+			code=$(printf '%s' "$response" |
+				json_get '@.Response.Error.Code')
+			echo "${code:+$code: }$message"
+			return 0
+		fi
+		[ -n "$response" ] || echo "empty API response"
+	else
+		code=$(printf '%s' "$response" | json_get '@.status.code')
+		if [ "$code" != "1" ]; then
+			message=$(printf '%s' "$response" | json_get '@.status.message')
+			[ -n "$message" ] || message="invalid API response"
+			echo "$message"
+		fi
+	fi
+}
+
+load_zones() {
+	local response error
+
+	[ -n "$DNSPOD_ZONES" ] && return 0
+
+	if [ "$AUTH_MODE" = "tc3" ]; then
+		response=$(api_call DescribeDomainList \
+			'{"Offset":0,"Limit":3000}')
+		error=$(api_error "$response")
+		if [ -n "$error" ]; then
+			log "DescribeDomainList failed: $error"
+			return 1
+		fi
+		DNSPOD_ZONES=$(printf '%s' "$response" |
+			json_get '@.Response.DomainList[*].Name')
+	else
+		response=$(api_call Domain.List)
+		error=$(api_error "$response")
+		if [ -n "$error" ]; then
+			log "Domain.List failed: $error"
+			return 1
+		fi
+		DNSPOD_ZONES=$(printf '%s' "$response" |
+			json_get '@.domains[*].name')
+	fi
+
+	if [ -z "$DNSPOD_ZONES" ]; then
+		log "DNSPod returned no managed domains"
+		return 1
+	fi
+}
+
+resolve_target() {
+	local domain="$1" sub zone candidate best
+
+	domain=$(printf '%s' "$domain" | tr '[:upper:]' '[:lower:]')
+	domain=${domain%.}
+
+	case "$domain" in
+	*@*)
+		sub=${domain%%@*}
+		zone=${domain#*@}
+		[ -n "$sub" ] || sub=@
+		[ -n "$zone" ] || return 1
+		echo "$sub|$zone"
+		return 0
+		;;
+	esac
+
+	if [ -n "$ROOT_DOMAIN" ]; then
+		case "$domain" in
+		"$ROOT_DOMAIN"|*."$ROOT_DOMAIN") best=$ROOT_DOMAIN ;;
+		*)
+			log "$domain is outside the configured root domain $ROOT_DOMAIN"
+			return 1
+			;;
+		esac
+	else
+		load_zones || return 1
+
+		best=
+		for candidate in $DNSPOD_ZONES; do
+			case "$domain" in
+			"$candidate"|*."$candidate")
+				if [ -z "$best" ] || [ ${#candidate} -gt ${#best} ]; then
+					best=$candidate
+				fi
+				;;
+			esac
+		done
+	fi
+
+	if [ -z "$best" ]; then
+		log "$domain does not match a domain in this DNSPod account"
+		return 1
+	fi
+
+	sub=${domain%.$best}
+	[ "$sub" = "$domain" ] && sub=@
+	echo "$sub|$best"
+}
+
+api_record_list() {
+	local zone="$1" sub="$2" type="$3"
+
+	if [ "$AUTH_MODE" = "tc3" ]; then
+		api_call DescribeRecordList "$(printf \
+			'{"Domain":"%s","Subdomain":"%s","RecordType":"%s","Limit":100}' \
+			"$zone" "$sub" "$type")"
+	else
+		api_call Record.List "$zone|$sub" "$type"
+	fi
+}
+
+api_record_create() {
+	local zone="$1" sub="$2" type="$3" ip="$4"
+
+	if [ "$AUTH_MODE" = "tc3" ]; then
+		api_call CreateRecord "$(printf \
+			'{"Domain":"%s","SubDomain":"%s","RecordType":"%s","RecordLine":"默认","Value":"%s","TTL":600}' \
+			"$zone" "$sub" "$type" "$ip")"
+	else
+		api_call Record.Create "$zone|$sub" "$type" 0 "$ip" 600
+	fi
+}
+
+api_record_modify() {
+	local zone="$1" sub="$2" type="$3" ip="$4" rid="$5" line="$6"
+
+	if [ "$AUTH_MODE" = "tc3" ]; then
+		api_call ModifyRecord "$(printf \
+			'{"Domain":"%s","SubDomain":"%s","RecordType":"%s","RecordLine":"%s","Value":"%s","TTL":600,"RecordId":%s}' \
+			"$zone" "$sub" "$type" "$line" "$ip" "$rid")"
+	else
+		api_call Record.Modify "$zone|$sub" "$type" "$line" "$ip" 600 "$rid"
+	fi
+}
+
+update_record() {
+	local domain="$1" type="$2" ip="$3"
+	local target sub zone response error rid val line
+
+	target=$(resolve_target "$domain") || return 1
+	sub=${target%%|*}
+	zone=${target#*|}
+
+	response=$(api_record_list "$zone" "$sub" "$type")
+	error=$(api_error "$response")
+	if [ -n "$error" ]; then
+		log "DescribeRecordList $domain failed: $error"
+		return 1
+	fi
+
+	if [ "$AUTH_MODE" = "tc3" ]; then
+		rid=$(printf '%s' "$response" | json_get '@.Response.RecordList[0].RecordId')
+		val=$(printf '%s' "$response" | json_get '@.Response.RecordList[0].Value')
+		line=$(printf '%s' "$response" | json_get '@.Response.RecordList[0].Line')
+	else
+		rid=$(printf '%s' "$response" | json_get '@.records[0].id')
+		val=$(printf '%s' "$response" | json_get '@.records[0].value')
+		line=$(printf '%s' "$response" | json_get '@.records[0].line_id')
+	fi
+	[ -n "$line" ] || line=0
+
+	if [ -z "$rid" ]; then
+		response=$(api_record_create "$zone" "$sub" "$type" "$ip")
+		error=$(api_error "$response")
+		if [ -n "$error" ]; then
+			log "CreateRecord $domain failed: $error"
+			return 1
+		fi
+		log "created $domain -> $ip"
+		return 0
+	fi
+
+	if [ "$val" = "$ip" ]; then
+		return 0
+	fi
+
+	response=$(api_record_modify "$zone" "$sub" "$type" "$ip" "$rid" "$line")
+	error=$(api_error "$response")
+	if [ -n "$error" ]; then
+		log "ModifyRecord $domain failed: $error"
+		return 1
+	fi
+	log "updated $domain: $val -> $ip"
+}
+
+do_update() {
+	local section fam type ip domains d ok bad rc=0
+
+	AUTH_MODE=$(cfg settings.auth_mode)
+	[ -n "$AUTH_MODE" ] || AUTH_MODE=token
+	ROOT_DOMAIN=$(cfg settings.root_domain | tr '[:upper:]' '[:lower:]')
+	ROOT_DOMAIN=${ROOT_DOMAIN%.}
+	DNSPOD_ZONES=
+
+	if [ "$AUTH_MODE" = "tc3" ]; then
+		SECRET_ID=$(cfg settings.secret_id)
+		SECRET_KEY=$(cfg settings.secret_key)
+		if [ -z "$SECRET_ID" ] || [ -z "$SECRET_KEY" ]; then
+			log "missing Tencent Cloud SecretId or SecretKey"
+			return 1
+		fi
+		if ! command -v openssl >/dev/null 2>&1; then
+			log "TC3 mode requires openssl-util (opkg install openssl-util)"
+			return 1
+		fi
+	else
+		DNSPOD_ID=$(cfg settings.username)
+		DNSPOD_TOKEN=$(cfg settings.password)
+		if [ -z "$DNSPOD_ID" ] || [ -z "$DNSPOD_TOKEN" ]; then
+			log "missing DNSPod ID or API token"
+			return 1
+		fi
+	fi
+
+	for section in ipv4 ipv6; do
+		[ "$(cfg "$section.enabled")" = "1" ] || continue
+
+		if [ "$section" = "ipv6" ]; then
+			fam=6
+			type=AAAA
+		else
+			fam=4
+			type=A
+		fi
+
+		ip=$(get_ip "$fam" "$section")
+		if [ -z "$ip" ]; then
+			log "no $section address available"
+			rc=1
+			continue
+		fi
+
+		ok=0
+		bad=0
+		domains=$(uci -q get "ddns-lite.$section.domains")
+		for d in $domains; do
+			[ -n "$d" ] || continue
+			if update_record "$d" "$type" "$ip"; then
+				ok=$((ok + 1))
+			else
+				bad=$((bad + 1))
+			fi
+		done
+
+		if [ "$ok" -eq 0 ] && [ "$bad" -eq 0 ]; then
+			log "$section is enabled but has no domains"
+			rc=1
+		else
+			log "$section $ip: $ok succeeded, $bad failed"
+			[ "$bad" -eq 0 ] || rc=1
+		fi
+	done
+
+	return $rc
+}
+
+if [ "$1" = "daemon" ]; then
+	while true; do
+		do_update
+		iv=$(cfg settings.interval)
+		case "$iv" in
+		''|*[!0-9]*) iv=10 ;;
+		esac
+		[ "$iv" -ge 1 ] || iv=10
+		sleep $((iv * 60))
+	done
+else
+	do_update
+fi

@@ -1,0 +1,20 @@
+#!/bin/sh
+
+[ "$1" = "-q" ] || exit 1
+[ "$2" = "get" ] || exit 1
+
+case "$3" in
+ddns-lite.settings.auth_mode) echo "${TEST_AUTH_MODE:-token}" ;;
+ddns-lite.settings.username) echo "582489" ;;
+ddns-lite.settings.password) echo "legacy-token" ;;
+ddns-lite.settings.secret_id) echo "${TEST_SECRET_ID:-AKIDEXAMPLE}" ;;
+ddns-lite.settings.secret_key) echo "${TEST_SECRET_KEY:-SecretExample}" ;;
+ddns-lite.settings.root_domain) echo "${TEST_ROOT_DOMAIN:-}" ;;
+ddns-lite.settings.interval) echo "10" ;;
+ddns-lite.ipv4.enabled) echo "1" ;;
+ddns-lite.ipv4.source) echo "script" ;;
+ddns-lite.ipv4.script) echo "printf '112.231.219.236\n'" ;;
+ddns-lite.ipv4.domains) printf '%s\n' 'ipv4.yu1998.com' '*.ipv4.yu1998.com' ;;
+ddns-lite.ipv6.enabled) echo "0" ;;
+*) exit 1 ;;
+esac

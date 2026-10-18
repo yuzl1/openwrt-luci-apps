@@ -16,174 +16,33 @@ function sh(cmd) {
 	return rtrim(out);
 }
 
-function opt(cfg, sid, key, value) {
-	if (value != null && value != '')
-		uci.set(cfg, sid, key, '' + value);
-}
-
 function get(section, option, fallback) {
 	const value = uci.get('ddns-lite', section, option);
 	return (value == null || value == '') ? fallback : value;
 }
 
-function join_dots(parts) {
-	let out = '';
+function family_domains(section) {
+	let domains = uci.get('ddns-lite', section, 'domains') || [];
+	const out = [];
 
-	for (let i = 0; i < length(parts); i++) {
-		if (i > 0)
-			out += '.';
-		out += parts[i];
+	if (type(domains) != 'array')
+		domains = [ domains ];
+
+	for (let i = 0; i < length(domains); i++) {
+		const name = trim(domains[i]);
+		if (length(name))
+			push(out, name);
 	}
 
 	return out;
 }
 
-/*
- * dnspod.cn expects "host@zone" (e.g. ipv4@yu1998.com). ddns-scripts itself
- * only splits at the first dot, which breaks wildcards on sub-domains such as
- * *.ipv4.yu1998.com, so normalise it here. An explicit "@" is passed through.
- */
-function dnspod_domain(domain) {
-	if (index(domain, '@') >= 0)
-		return domain;
-
-	const parts = split(domain, '.');
-	if (length(parts) < 2)
-		return domain;
-
-	let host = parts[0];
-	let rest = slice(parts, 1);
-
-	if (host == '*' && length(rest) >= 3) {
-		host = '*.' + rest[0];
-		rest = slice(rest, 1);
-	}
-
-	return host + '@' + join_dots(rest);
-}
-
-/*
- * ddns-scripts validates lookup_host against [@a-zA-Z0-9._-], so a wildcard
- * cannot be used there. Fall back to the zone (or the last two labels) which
- * is a valid, usually existing name to compare the current address with.
- */
-function lookup_host_for(domain, ts_domain) {
-	if (length(domain) < 2 || substr(domain, 0, 2) != '*')
-		return domain;
-
-	const at = index(ts_domain, '@');
-	if (at >= 0 && length(ts_domain) > at + 1)
-		return substr(ts_domain, at + 1);
-
-	const parts = split(domain, '.');
-	if (length(parts) >= 2)
-		return join_dots(slice(parts, length(parts) - 2));
-
-	return domain;
-}
-
-function add_family(ipv6) {
-	const section = ipv6 ? 'ipv6' : 'ipv4';
-
-	if (get(section, 'enabled', '0') != '1')
-		return 0;
-
-	const provider = get('settings', 'provider', 'dnspod.cn');
-	const username = get('settings', 'username', '');
-	const password = get('settings', 'password', '');
-	const interval = get('settings', 'interval', '10');
-	const source   = get(section, 'source', 'network');
-	let domains    = uci.get('ddns-lite', section, 'domains') || [];
-
-	/* A single entry may come back as a plain string instead of a list. */
-	if (type(domains) != 'array')
-		domains = [ domains ];
-
-	let count = 0;
-
-	for (let i = 0; i < length(domains); i++) {
-		const domain = trim(domains[i]);
-		if (!length(domain))
-			continue;
-
-		const sid = uci.add('ddns', 'service');
-		const ts_domain = (provider == 'dnspod.cn' || provider == 'dnspod.com')
-			? dnspod_domain(domain) : domain;
-		const lookup_host = lookup_host_for(domain, ts_domain);
-
-		opt('ddns', sid, 'service_name', provider);
-		opt('ddns', sid, 'domain', ts_domain);
-		opt('ddns', sid, 'lookup_host', lookup_host);
-		opt('ddns', sid, 'username', username);
-		opt('ddns', sid, 'password', password);
-		opt('ddns', sid, 'check_interval', interval);
-		opt('ddns', sid, 'check_unit', 'minutes');
-		opt('ddns', sid, 'force_interval', '72');
-		opt('ddns', sid, 'force_unit', 'hours');
-		opt('ddns', sid, 'managed_by', 'ddns-lite');
-		opt('ddns', sid, 'enabled', '1');
-
-		if (ipv6)
-			opt('ddns', sid, 'use_ipv6', '1');
-
-		if (source == 'interface') {
-			const dev = get(section, 'interface', 'pppoe-wan');
-			opt('ddns', sid, 'interface', dev);
-			opt('ddns', sid, 'ip_source', 'interface');
-			opt('ddns', sid, 'ip_interface', dev);
-		}
-		else if (source == 'script') {
-			opt('ddns', sid, 'interface', ipv6 ? 'wan6' : 'wan');
-			opt('ddns', sid, 'ip_source', 'script');
-			opt('ddns', sid, 'ip_script', get(section, 'script', ''));
-		}
-		else if (source == 'network') {
-			const net = get(section, 'network', 'pppoe-wan');
-			opt('ddns', sid, 'interface', net);
-			opt('ddns', sid, 'ip_source', 'network');
-			opt('ddns', sid, 'ip_network', net);
-		}
-		else {
-			opt('ddns', sid, 'interface', ipv6 ? 'wan6' : 'wan');
-			opt('ddns', sid, 'ip_source', 'web');
-			opt('ddns', sid, 'ip_url', get(section, 'url', ''));
-		}
-
-		count++;
-	}
-
-	return count;
-}
-
 const methods = {};
-
-methods.providers = {
-	call: function() {
-		const out = sh("ls -1 /usr/share/ddns/default/*.json 2>/dev/null");
-		const found = [];
-
-		if (length(out)) {
-			const lines = split(out, '\n');
-			for (let i = 0; i < length(lines); i++) {
-				let name = trim(lines[i]);
-				if (!length(name))
-					continue;
-				name = replace(name, /.*\//, '');
-				name = replace(name, /\.json$/, '');
-				push(found, name);
-			}
-		}
-
-		return { providers: found };
-	}
-};
 
 methods.status = {
 	call: function() {
-		/* The updater is a shell script, so match the command line instead
-		 * of relying on pidof() and the process comm name. */
-		const running = (sh("pgrep -f 'dynamic_dns_updater' 2>/dev/null") != '');
-		const log = sh("logread 2>/dev/null | grep -i 'ddns' | tail -n 20");
+		const running = (sh("pgrep -f '/usr/bin/ddns-lite-update daemon$' 2>/dev/null") != '');
+		const log = sh("logread 2>/dev/null | grep -i 'ddns-lite\\[' | tail -n 20");
 
 		return { running: running, log: log };
 	}
@@ -197,7 +56,7 @@ methods.service_control = {
 		if (action != 'start' && action != 'stop' && action != 'restart')
 			return { ok: false, error: 'Invalid action' };
 
-		const out = sh('/etc/init.d/ddns ' + action + ' 2>&1');
+		const out = sh('/etc/init.d/ddns-lite ' + action + ' 2>&1');
 
 		return { ok: true, action: action, output: out };
 	}
@@ -206,30 +65,37 @@ methods.service_control = {
 methods.apply = {
 	call: function() {
 		uci.load('ddns-lite');
-		uci.load('ddns');
 
-		const username = get('settings', 'username', '');
-		const password = get('settings', 'password', '');
+		const auth_mode = get('settings', 'auth_mode', 'token');
 
-		if (!length(username) || !length(password))
-			return { ok: false, error: 'Account/ID and token/password are required.' };
-
-		/* Only replace the entries this app created. */
-		uci.foreach('ddns', 'service', function(s) {
-			if (s.managed_by == 'ddns-lite')
-				uci.delete('ddns', s['.name']);
-		});
+		if (auth_mode == 'tc3') {
+			const secret_id = get('settings', 'secret_id', '');
+			const secret_key = get('settings', 'secret_key', '');
+			if (!length(secret_id) || !length(secret_key))
+				return { ok: false, error: 'Tencent Cloud SecretId and SecretKey are required.' };
+			if (!length(sh('command -v openssl 2>/dev/null')))
+				return { ok: false, error: 'TC3 authentication requires openssl-util. Install it with: opkg install openssl-util' };
+		}
+		else {
+			const id = get('settings', 'username', '');
+			const token = get('settings', 'password', '');
+			if (!length(id) || !length(token))
+				return { ok: false, error: 'DNSPod ID and API token are required.' };
+		}
 
 		let count = 0;
-		count += add_family(false);
-		count += add_family(true);
+
+		if (get('ipv4', 'enabled', '0') == '1')
+			count += length(family_domains('ipv4'));
+
+		if (get('ipv6', 'enabled', '0') == '1')
+			count += length(family_domains('ipv6'));
 
 		if (count == 0)
 			return { ok: false, error: 'Enable IPv4 or IPv6 and add at least one domain.' };
 
-		uci.commit('ddns');
-
-		const out = sh('/etc/init.d/ddns restart 2>&1');
+		uci.commit('ddns-lite');
+		const out = sh('/etc/init.d/ddns-lite restart 2>&1');
 
 		return { ok: true, entries: count, output: out };
 	}

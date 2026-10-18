@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+
+import hashlib
+import hmac
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+
+def option(name):
+    try:
+        return sys.argv[sys.argv.index(name) + 1]
+    except (ValueError, IndexError):
+        return ""
+
+
+def legacy():
+    url = next((arg for arg in sys.argv[1:] if "/" in arg and arg.startswith("http")), "")
+    data = sys.argv[sys.argv.index("--data-urlencode") + 1:] if "--data-urlencode" in sys.argv else []
+    if "Record.Create" in url:
+        return {"status": {"code": "1", "message": "ok"}}
+    if "Record.Modify" in url:
+        return {"status": {"code": "1", "message": "ok"}}
+    if "Record.List" in url:
+        sub = next((item.split("=", 1)[1] for item in data if item.startswith("sub_domain=")), "")
+        if sub == "ipv4":
+            return {"status": {"code": "1"}, "records": [{"id": "101", "value": "1.1.1.1", "line_id": "0"}]}
+        return {"status": {"code": "1"}, "records": []}
+    return {"status": {"code": "1"}, "domains": [{"name": "yu1998.com"}]}
+
+
+def tc3_signature(payload, action, timestamp, secret_key):
+    host = "dnspod.tencentcloudapi.com"
+    service = "dnspod"
+    version = "2021-03-23"
+    date = datetime.fromtimestamp(int(timestamp), timezone.utc).strftime("%Y-%m-%d")
+    signed_headers = "content-type;host;x-tc-action;x-tc-timestamp;x-tc-version"
+    canonical = (
+        "POST\n/\n\n"
+        "content-type:application/json; charset=utf-8\n"
+        f"host:{host}\n"
+        f"x-tc-action:{action.lower()}\n"
+        f"x-tc-timestamp:{timestamp}\n"
+        f"x-tc-version:{version}\n\n"
+        f"{signed_headers}\n"
+        f"{hashlib.sha256(payload.encode()).hexdigest()}"
+    )
+    scope = f"{date}/{service}/tc3_request"
+    string_to_sign = (
+        f"TC3-HMAC-SHA256\n{timestamp}\n{scope}\n"
+        f"{hashlib.sha256(canonical.encode()).hexdigest()}"
+    )
+    secret_date = hmac.new(("TC3" + secret_key).encode(), date.encode(), hashlib.sha256).digest()
+    secret_service = hmac.new(secret_date, service.encode(), hashlib.sha256).digest()
+    signing_key = hmac.new(secret_service, b"tc3_request", hashlib.sha256).digest()
+    return scope, hmac.new(signing_key, string_to_sign.encode(), hashlib.sha256).hexdigest()
+
+
+def tc3():
+    action = option("-H")
+    for index, arg in enumerate(sys.argv):
+        if arg == "-H" and sys.argv[index + 1].startswith("X-TC-Action:"):
+            action = sys.argv[index + 1].split(":", 1)[1].strip()
+    payload = option("--data-binary")
+    timestamp = ""
+    authorization = ""
+    for index, arg in enumerate(sys.argv):
+        if arg != "-H":
+            continue
+        header = sys.argv[index + 1]
+        if header.startswith("X-TC-Timestamp:"):
+            timestamp = header.split(":", 1)[1].strip()
+        elif header.startswith("Authorization:"):
+            authorization = header.split(":", 1)[1].strip()
+
+    scope, signature = tc3_signature(
+        payload, action, timestamp, os.environ.get("TEST_SECRET_KEY", "SecretExample")
+    )
+    if signature not in authorization or scope not in authorization:
+        return {"Response": {"Error": {"Code": "AuthFailure.SignatureFailure", "Message": "bad signature"}}}
+
+    if action == "DescribeDomainList":
+        return {"Response": {"DomainList": [{"Name": "yu1998.com"}]}}
+    if action == "DescribeRecordList":
+        subdomain = json.loads(payload).get("Subdomain")
+        if subdomain == "ipv4":
+            return {"Response": {"RecordList": [{"RecordId": 201, "Value": "1.1.1.1", "Line": "默认"}]}}
+        return {"Response": {"RecordList": []}}
+    return {"Response": {"RequestId": "ok"}}
+
+
+print(json.dumps(tc3() if os.environ.get("TEST_AUTH_MODE") == "tc3" else legacy()))

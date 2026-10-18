@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+
+import json
+import re
+import sys
+
+
+def parse_path(expression):
+    if not expression.startswith("@"):
+        raise ValueError(expression)
+    return [part for part in expression[1:].split(".") if part]
+
+
+def walk(value, parts):
+    if not parts:
+        if isinstance(value, (str, int, float, bool)):
+            return [str(value).lower() if isinstance(value, bool) else str(value)]
+        return []
+
+    head, rest = parts[0], parts[1:]
+    wildcard = re.fullmatch(r"(.+)\[\*\]", head)
+    indexed = re.fullmatch(r"(.+)\[(\d+)\]", head)
+
+    if wildcard:
+        key = wildcard.group(1)
+        current = value.get(key, []) if isinstance(value, dict) else []
+        result = []
+        for item in current:
+            result.extend(walk(item, rest))
+        return result
+
+    if indexed:
+        key = indexed.group(1)
+        index = int(indexed.group(2))
+        current = value.get(key, []) if isinstance(value, dict) else []
+        return walk(current[index], rest) if index < len(current) else []
+
+    if isinstance(value, dict) and head in value:
+        return walk(value[head], rest)
+    return []
+
+
+def main():
+    expression = sys.argv[sys.argv.index("-e") + 1]
+    data = json.load(sys.stdin)
+    for item in walk(data, parse_path(expression)):
+        print(item)
+
+
+if __name__ == "__main__":
+    main()

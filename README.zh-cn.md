@@ -1,4 +1,4 @@
-# luci-app-tailscale-community（OpenWrt / ImmortalWrt 23.05 移植版）
+# yuzl1 OpenWrt / ImmortalWrt LuCI 插件源
 
 [English](README.md) | 简体中文
 
@@ -7,7 +7,7 @@
 | 包 | 说明 |
 | --- | --- |
 | `luci-app-tailscale-community` | 官方 `tailscale` 包的 LuCI 界面 |
-| `luci-app-ddns-lite` | ddns-go 风格的 DDNS 页面，底层用 `ddns-scripts`（纯 shell，不额外跑 Go 进程，内存占用极小） |
+| `luci-app-ddns-lite` | 独立 DNSPod DDNS 客户端，支持旧版 Token 和腾讯云 TC3 签名 |
 
 两个包都是 `Architecture: all`，构建后连同签名索引一起发布到 `gh-pages`
 分支，可以直接作为 opkg 源使用。
@@ -143,7 +143,7 @@ GitHub 的 Secret 只写不可读，所以一定要另外备份一份，否则�
 
 ```
 untrusted comment: yuzl1 openwrt-luci-apps feed
-RWRCSwAAAADJM8yigmcWB9yADgAaMmkizErB2QBfnEh3bMa1CgM+v3A9K7stukgc3cXmMfT/0dWcyfhqx2zIbvwuUvC8WXhjZRL1yzaXE2kKD2f4UPIHBm9NT9yb4K9neZ+61pj1G34=
+<这里只粘贴你密码管理器里的私钥第二行，不要把私钥提交到仓库>
 ```
 
 私钥只用于给这个源签名，**不要提交到仓库，也不要外传**；泄露后别人可以伪造这个
@@ -221,36 +221,45 @@ git rm keys/<旧keyid>.pub
 
 ## DDNS Lite
 
-`luci-app-ddns-lite` 用 ddns-go 的使用思路（选服务商、填 ID/Token、列域名），
-但底层复用 `ddns-scripts`，不额外跑 Go 进程，内存占用很小。
+`luci-app-ddns-lite` 已改为完全独立的 DNSPod 客户端，不再生成或依赖
+`ddns-scripts`。独立实现后的版本号从 `1.0.0` 重新开始。
 
-* **服务 → DDNS Lite**：选服务商、填账号/ID 与 Token、设置检查间隔
+* **服务 → DDNS Lite**：可选旧版 DNSPod Token，或腾讯云
+  SecretId/SecretKey（TC3 签名），并设置检查间隔
 * IPv4 和 IPv6 分开配置，每种都支持四种获取方式：
   逻辑接口（`network`）、网卡设备（`interface`）、URL 获取（`web`）、命令获取（`script`）
 * IPv4 内置查询地址：`myip.ipip.net`、`ddns.oray.com/checkip`、
   `ip.3322.net`、`4.ipw.cn`、`v4.yinghualuo.cn/bejson`
 * IPv6 内置查询地址：`speed.neu6.edu.cn/getIP.php`、`v6.ident.me`、
   `6.ipw.cn`、`v6.yinghualuo.cn/bejson`
-* 支持泛域名：直接填 `*.example.com`；子域上的泛域名（`*.ipv4.example.com`）
-  会自动转换成 DNSPod 需要的 `*.ipv4@example.com`，也可以手写 `子域@主域` 形式
-* 点 **保存并应用** 会自动生成对应的 `/etc/config/ddns` 条目（带
-  `managed_by ddns-lite` 标记）并重启 `ddns` 服务
-* 通过原版 ddns-scripts 界面手工创建的条目不会被改动
-
-服务商脚本**不再默认安装**，用哪个装哪个：
+* 程序会从 DNSPod 账户读取根域名，再匹配最长后缀；`*.ipv4.yu1998.com`
+  会正确拆成子域 `*.ipv4` 和根域 `yu1998.com`，不需要手动填写
+  `*.ipv4@yu1998.com`
+* 页面里另有一个可选的 **根域名** 输入框；直接填 `yu1998.com` 就会按这个
+  根域拆分，不再请求接口自动识别
+* 直接调用 DNSPod 的 `Record.List`、`Record.Create`、`Record.Modify`；
+  成功更新和 API 错误都会显示在页面日志中
+* 旧版 Token 模式只需要 `curl` 和 `jsonfilter`；腾讯云 TC3 模式还要安装
+  `openssl-util`：
 
 ```sh
-opkg install ddns-scripts-dnspod        # DNSPod / 腾讯云
-opkg install ddns-scripts-cloudflare    # Cloudflare
-opkg install ddns-scripts_aliyun        # 阿里云
+opkg install openssl-util
 ```
 
-页面里的服务商列表只显示已安装的服务（读取 `/usr/share/ddns/default/*.json`），
-没装的自然不会出现，也不会被顺带装上。
+* 从 `1.7.x` 升级时，只会删除 `/etc/config/ddns` 里带
+  `managed_by ddns-lite` 的旧条目；原版 ddns-scripts 手工创建的条目不会动
+* RPC 插件变化后使用 `rpcd reload`，不再重启整个 `rpcd`，正常情况下不会
+  再把当前 LuCI 登录挤掉
 
-> **注意**：安装/升级时如果 ucode 的 RPC 脚本有变化，会重启一次 `rpcd`，
-> 这会把当前 LuCI 登录会话失效（提示“会话已过期”），重新登录即可；
-> 只更新页面等不涉及 RPC 的版本不会重启，也就不会掉登录。
+因为独立实现按要求从 `1.0.0` 重新起算，opkg 会把它视为比 `1.7.x`
+更旧的版本。刷新源后，第一次切换用强制降级安装即可，这样会保留原配置：
+
+```sh
+opkg update
+opkg install --force-downgrade luci-app-ddns-lite
+```
+
+旧 `/etc/config/ddns-lite` 是 conffile，强制降级安装时会保留原来的账号和域名配置。
 
 ## 不需要 SDK 的本地打包
 

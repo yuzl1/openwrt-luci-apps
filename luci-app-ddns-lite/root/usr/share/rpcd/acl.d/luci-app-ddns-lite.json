@@ -3,7 +3,7 @@
 		"description": "Grant access to DDNS Lite",
 		"read": {
 			"ubus": {
-				"ddns-lite": [ "status", "providers" ]
+				"ddns-lite": [ "status" ]
 			},
 			"uci": [ "ddns-lite" ]
 		},
