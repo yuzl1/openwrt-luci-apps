@@ -388,6 +388,7 @@ update_record() {
 	fi
 
 	if [ "$val" = "$ip" ]; then
+		log "$domain -> $ip (unchanged)"
 		return 0
 	fi
 
