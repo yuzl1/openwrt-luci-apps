@@ -18,14 +18,23 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq meson ninja-build build-essential pkg-config zlib1g-dev
+          sudo apt-get install -y -qq meson ninja-build build-essential pkg-config \
+            zlib1g-dev libssl-dev wget
 
       - name: Build apk-tools 3.0.5
         run: |
           git clone --depth 1 --branch v3.0.5 \
             https://gitlab.alpinelinux.org/alpine/apk-tools.git /tmp/apk-tools
           meson setup /tmp/apk-tools/build /tmp/apk-tools \
-            -Ddocs=disabled -Ddefault_library=static
+            -Db_lto=true \
+            -Ddocs=disabled \
+            -Dhelp=disabled \
+            -Ddefault_library=static \
+            -Durl_backend=wget \
+            -Dzstd=disabled \
+            -Dpython=disabled \
+            -Dtests=disabled \
+            -Dcrypto_backend=openssl
           meson compile -C /tmp/apk-tools/build
           /tmp/apk-tools/build/apk --version
           echo "APK_BIN=/tmp/apk-tools/build/apk" >> "$GITHUB_ENV"

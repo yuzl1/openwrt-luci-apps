@@ -220,7 +220,7 @@ chmod 755 "$stage/scripts/"*
 prepare_meta "$stage/rootfs" tailscale /etc/config/tailscale
 mkpkg tailscale "${VERSION}-r${RELEASE}" "$ARCH" \
 	"Tailscale static ARMv7 daemon" \
-	"ca-bundle iptables-nft ip6tables-nft iptables-mod-conntrack-extra kmod-ipt-conntrack kmod-ipt-conntrack-extra kmod-ipt-nat kmod-ipt-nat6 kmod-tun" \
+	"ca-bundle kmod-tun" \
 	"$stage/rootfs" "$stage/scripts"
 
 rm -rf "$OUT"/.build-*
