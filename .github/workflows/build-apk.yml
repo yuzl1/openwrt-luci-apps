@@ -31,10 +31,9 @@ jobs:
         run: |
           meson --version
           meson setup /tmp/apk-tools/build /tmp/apk-tools \
-            -Db_lto=true \
             -Ddocs=disabled \
             -Dhelp=disabled \
-            -Ddefault_library=static \
+            -Dlua=disabled \
             -Durl_backend=wget \
             -Dzstd=disabled \
             -Dpython=disabled \
