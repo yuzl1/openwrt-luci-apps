@@ -87,8 +87,7 @@ jobs:
             exit 0
           fi
           printf '%s\n' "$USIGN_SECRET" > /tmp/feed.sec
-          usign -S -m publish/Packages -s /tmp/feed.sec -x publish/Packages.sig
-          cp publish/Packages.sig publish/23.05/Packages.sig
+          usign -S -m publish/23.05/Packages -s /tmp/feed.sec -x publish/23.05/Packages.sig
           rm -f /tmp/feed.sec
           for key in keys/*.pub; do
             echo "signing key: $(usign -F -p "$key") ($key)"
