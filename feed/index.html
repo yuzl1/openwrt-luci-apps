@@ -53,10 +53,11 @@ opkg update
 opkg install luci-app-ddns-lite luci-app-tailscale-community tailscale</pre>
 
 <h2>25.12 配置（apk）</h2>
-<pre>echo "https://yuzl1.github.io/openwrt-luci-apps/25.12/" &gt;&gt; /etc/apk/repositories.d/customfeeds.list
-apk --allow-untrusted update
-apk add --allow-untrusted luci-app-ddns-lite luci-app-tailscale-community tailscale</pre>
-<p class="sub">25.12 源目前未做 apk RSA 签名，所以需要 <code>--allow-untrusted</code>。也可以直接从 Releases 下载 .apk 手动安装。</p>
+<pre>wget -O /etc/apk/keys/yuzl1-apk.pem https://yuzl1.github.io/openwrt-luci-apps/25.12/yuzl1-apk.pem
+echo "https://yuzl1.github.io/openwrt-luci-apps/25.12/" &gt;&gt; /etc/apk/repositories.d/customfeeds.list
+apk update
+apk add luci-app-ddns-lite luci-app-tailscale-community tailscale</pre>
+<p class="sub">先安装 <code>yuzl1-apk.pem</code> 公钥后，源索引和包都带 ECDSA P-256 签名，不需要 <code>--allow-untrusted</code>。如果暂时不想装公钥，也可以直接下载 .apk 用 <code>apk add --allow-untrusted</code> 手动安装。</p>
 
 <h2>直接下载</h2>
 <p><a href="https://github.com/yuzl1/openwrt-luci-apps/releases">全部 Releases（23.05 的 .ipk 与 25.12 的 .apk）</a></p>
