@@ -1,0 +1,57 @@
+name: Build apk (25.12)
+
+on:
+  push:
+    branches: [ openwrt-25.12 ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq meson ninja-build build-essential pkg-config zlib1g-dev
+
+      - name: Build apk-tools 3.0.5
+        run: |
+          git clone --depth 1 --branch v3.0.5 \
+            https://gitlab.alpinelinux.org/alpine/apk-tools.git /tmp/apk-tools
+          meson setup /tmp/apk-tools/build /tmp/apk-tools \
+            -Ddocs=disabled -Ddefault_library=static
+          meson compile -C /tmp/apk-tools/build
+          /tmp/apk-tools/build/apk --version
+          echo "APK_BIN=/tmp/apk-tools/build/apk" >> "$GITHUB_ENV"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
+
+      - name: Build apk packages
+        run: |
+          chmod +x build-apk.sh
+          ./build-apk.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-luci-apps-apk
+          path: dist-apk/*.apk
+          if-no-files-found: error
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-25.12-${{ github.run_number }}
+          name: apk 25.12 build ${{ github.run_number }}
+          prerelease: true
+          files: dist-apk/*.apk
