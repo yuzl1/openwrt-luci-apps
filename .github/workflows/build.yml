@@ -114,3 +114,43 @@ jobs:
         with:
           files: dist/*.ipk
           generate_release_notes: true
+
+      - name: Clean old ipk releases
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GITHUB_TOKEN"]
+
+          def api(path, method="GET"):
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}{path}",
+                  method=method,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                  })
+              resp = urllib.request.urlopen(req)
+              return json.load(resp) if method == "GET" else resp.read()
+
+          releases = api("/releases?per_page=100")
+          kept = False
+          for r in releases:
+              tag = r["tag_name"]
+              if not tag.startswith("v"):
+                  continue
+              if not kept:
+                  kept = True
+                  print("keep", tag)
+                  continue
+              print("delete release", tag)
+              try:
+                  api(f"/releases/{r['id']}", "DELETE")
+                  api(f"/git/refs/tags/{tag}", "DELETE")
+              except urllib.error.HTTPError as e:
+                  print("skip", tag, e.code)
+          PY
