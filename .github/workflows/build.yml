@@ -62,12 +62,9 @@ jobs:
       - name: Prepare feed directory
         run: |
           mkdir -p publish/23.05
-          cp dist/*.ipk dist/Packages dist/Packages.gz publish/
           cp dist/*.ipk dist/Packages dist/Packages.gz publish/23.05/
-          cp feed/README.md publish/README.md
           cp feed/README.md publish/23.05/README.md
           cp feed/index.html publish/index.html
-          cp feed/index.html publish/23.05/index.html
           ls -l publish
           ls -l publish/23.05
 
@@ -105,6 +102,11 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./publish
           publish_branch: gh-pages
+          # Only the landing page and the 23.05 feed belong to this workflow;
+          # keep the 25.12 apk feed published by the other workflow.
+          force_orphan: true
+          keep_files: |
+            25.12
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
