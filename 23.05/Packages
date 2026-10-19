@@ -1,0 +1,46 @@
+Package: luci-app-ddns-lite
+Version: 1.0.3-1
+Depends: curl, jsonfilter, luci-base, rpcd-mod-ucode, ucode, ucode-mod-fs, ucode-mod-uci, ucode-mod-ubus
+Architecture: all
+Section: luci
+Priority: optional
+Maintainer: yuzl1
+Description: LuCI DDNS Lite
+ Standalone DNSPod updater with legacy token and Tencent Cloud TC3 authentication.
+Conffiles:
+ /etc/config/ddns-lite 4648e1b33c6f3c6dd15e46c461b5d6e5
+Filename: ./luci-app-ddns-lite_1.0.3-1_all.ipk
+Size: 9796
+SHA256sum: c82c064c79a541040ac77e67b4575a78205730f5499c4836d2569ad0b0dac03c
+
+Package: luci-app-tailscale-community
+Version: 1.0.2-1
+Depends: tailscale, ip-full, luci-base, rpcd-mod-ucode, ucode, ucode-mod-fs, ucode-mod-uci, ucode-mod-ubus
+Architecture: all
+Section: luci
+Priority: optional
+Maintainer: yuzl1
+Description: LuCI support for Tailscale
+ Web management interface for Tailscale: status, login/logout, settings and subnet routes.
+Filename: ./luci-app-tailscale-community_1.0.2-1_all.ipk
+Size: 14721
+SHA256sum: 0d945a6e6e0602164b1da32023132a953b7f64e01832f3619b9cc9a4c3b1e322
+
+Package: tailscale
+Version: 1.104.1-3
+Depends: ca-bundle, iptables-nft, ip6tables-nft, iptables-mod-conntrack-extra, kmod-ipt-conntrack, kmod-ipt-conntrack-extra, kmod-ipt-nat, kmod-ipt-nat6, kmod-tun
+Provides: tailscaled
+Architecture: arm_cortex-a7_neon-vfpv4
+Installed-Size: 35457
+Section: net
+Priority: optional
+Maintainer: yuzl1
+License: BSD-3-Clause
+Description: Tailscale static ARMv7 daemon
+ Tailscale daemon built from upstream 1.104.1 with OpenWrt-safe build tags.
+Conffiles:
+ /etc/config/tailscale f7f7eec2be9a8ffb07ecefdd40ae9916
+Filename: ./tailscale_1.104.1-3_arm_cortex-a7_neon-vfpv4.ipk
+Size: 13308500
+SHA256sum: 1d546be809d53a5ee043d0dfc7a47b557af93b45f7309c49f0408208172c8c57
+
