@@ -41,7 +41,9 @@ jobs:
       - name: Generate APKINDEX
         run: |
           cd dist-apk
-          "$APK_BIN" index -o APKINDEX.tar.gz *.apk
+          # apk mkpkg produces v3 packages; the v2 "apk index" applet cannot
+          # read them. Use mkndx and allow the unsigned local packages.
+          "$APK_BIN" mkndx --allow-untrusted -o APKINDEX.tar.gz *.apk
           ls -l
 
       - name: Upload artifacts
