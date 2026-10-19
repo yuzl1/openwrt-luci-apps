@@ -29,14 +29,14 @@ jobs:
 
       - name: Prepare apk signing key
         env:
-          APK_SIGN_KEY: ${{ secrets.APK_SIGN_KEY }}
+          APK_SIGN_KEY_25_12: ${{ secrets.APK_SIGN_KEY_25_12 }}
         run: |
-          if [ -n "$APK_SIGN_KEY" ]; then
-            printf '%s\n' "$APK_SIGN_KEY" > /tmp/yuzl1-apk.pem
-            chmod 600 /tmp/yuzl1-apk.pem
-            echo "APK_SIGN_KEY_FILE=/tmp/yuzl1-apk.pem" >> "$GITHUB_ENV"
+          if [ -n "$APK_SIGN_KEY_25_12" ]; then
+            printf '%s\n' "$APK_SIGN_KEY_25_12" > /tmp/yuzl1-apk-25.12.pem
+            chmod 600 /tmp/yuzl1-apk-25.12.pem
+            echo "APK_SIGN_KEY_FILE=/tmp/yuzl1-apk-25.12.pem" >> "$GITHUB_ENV"
           else
-            echo "APK_SIGN_KEY is not set - building unsigned packages"
+            echo "APK_SIGN_KEY_25_12 is not set - building unsigned packages"
           fi
 
       - name: Set up Go
@@ -71,7 +71,7 @@ jobs:
           path: |
             dist-apk/*.apk
             dist-apk/APKINDEX.tar.gz
-            dist-apk/yuzl1-apk.pem
+            dist-apk/yuzl1-apk-25.12.pem
           if-no-files-found: error
 
       - name: Release
@@ -83,7 +83,7 @@ jobs:
           files: |
             dist-apk/*.apk
             dist-apk/APKINDEX.tar.gz
-            dist-apk/yuzl1-apk.pem
+            dist-apk/yuzl1-apk-25.12.pem
 
       - name: Publish apk feed to gh-pages
         env:
@@ -95,7 +95,7 @@ jobs:
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages
           mkdir -p /tmp/gh-pages/25.12
           rm -f /tmp/gh-pages/25.12/*
-          cp dist-apk/*.apk dist-apk/APKINDEX.tar.gz dist-apk/yuzl1-apk.pem \
+          cp dist-apk/*.apk dist-apk/APKINDEX.tar.gz dist-apk/yuzl1-apk-25.12.pem \
             /tmp/gh-pages/25.12/
           cd /tmp/gh-pages
           git add 25.12

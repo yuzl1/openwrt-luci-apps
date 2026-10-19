@@ -230,6 +230,6 @@ mkpkg tailscale "${VERSION}-r${RELEASE}" "$ARCH" \
 
 rm -rf "$OUT"/.build-*
 
-[ -f "$HERE/keys/yuzl1-apk.pem" ] && cp "$HERE/keys/yuzl1-apk.pem" "$OUT/"
+[ -f "$HERE/keys/yuzl1-apk-25.12.pem" ] && cp "$HERE/keys/yuzl1-apk-25.12.pem" "$OUT/"
 
 ls -l "$OUT"/*.apk
