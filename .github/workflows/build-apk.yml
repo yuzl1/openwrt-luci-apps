@@ -27,6 +27,18 @@ jobs:
           /tmp/apk-static/sbin/apk.static --version
           echo "APK_BIN=/tmp/apk-static/sbin/apk.static" >> "$GITHUB_ENV"
 
+      - name: Prepare apk signing key
+        env:
+          APK_SIGN_KEY: ${{ secrets.APK_SIGN_KEY }}
+        run: |
+          if [ -n "$APK_SIGN_KEY" ]; then
+            printf '%s\n' "$APK_SIGN_KEY" > /tmp/yuzl1-apk.pem
+            chmod 600 /tmp/yuzl1-apk.pem
+            echo "APK_SIGN_KEY_FILE=/tmp/yuzl1-apk.pem" >> "$GITHUB_ENV"
+          else
+            echo "APK_SIGN_KEY is not set - building unsigned packages"
+          fi
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -42,8 +54,14 @@ jobs:
         run: |
           cd dist-apk
           # apk mkpkg produces v3 packages; the v2 "apk index" applet cannot
-          # read them. Use mkndx and allow the unsigned local packages.
-          "$APK_BIN" mkndx --allow-untrusted -o APKINDEX.tar.gz *.apk
+          # read them. Use mkndx. When a signing key is configured, sign the
+          # index too so clients do not need --allow-untrusted.
+          if [ -n "$APK_SIGN_KEY_FILE" ]; then
+            "$APK_BIN" mkndx --allow-untrusted --sign-key "$APK_SIGN_KEY_FILE" \
+              -o APKINDEX.tar.gz *.apk
+          else
+            "$APK_BIN" mkndx --allow-untrusted -o APKINDEX.tar.gz *.apk
+          fi
           ls -l
 
       - name: Upload artifacts
@@ -53,6 +71,7 @@ jobs:
           path: |
             dist-apk/*.apk
             dist-apk/APKINDEX.tar.gz
+            dist-apk/yuzl1-apk.pem
           if-no-files-found: error
 
       - name: Release
@@ -64,6 +83,7 @@ jobs:
           files: |
             dist-apk/*.apk
             dist-apk/APKINDEX.tar.gz
+            dist-apk/yuzl1-apk.pem
 
       - name: Publish apk feed to gh-pages
         env:
@@ -75,7 +95,8 @@ jobs:
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages
           mkdir -p /tmp/gh-pages/25.12
           rm -f /tmp/gh-pages/25.12/*
-          cp dist-apk/*.apk dist-apk/APKINDEX.tar.gz /tmp/gh-pages/25.12/
+          cp dist-apk/*.apk dist-apk/APKINDEX.tar.gz dist-apk/yuzl1-apk.pem \
+            /tmp/gh-pages/25.12/
           cd /tmp/gh-pages
           git add 25.12
           git commit -m "25.12: update apk feed" || true

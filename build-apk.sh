@@ -12,6 +12,7 @@ set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 OUT=$HERE/dist-apk
 APK_BIN=${APK_BIN:-apk}
+SIGN_KEY=${APK_SIGN_KEY_FILE:-}
 
 command -v "$APK_BIN" >/dev/null 2>&1 || {
 	echo "apk host tool not found; set APK_BIN=/path/to/apk" >&2
@@ -72,6 +73,10 @@ mkpkg() {
 		--info "depends:$deps" \
 		--files "$rootfs" \
 		--output "$OUT/${pkg}-${ver}.apk"
+
+	if [ -n "$SIGN_KEY" ] && [ -f "$SIGN_KEY" ]; then
+		set -- "$@" --sign-key "$SIGN_KEY"
+	fi
 
 	[ -f "$scripts/post-install" ] \
 		&& set -- "$@" --script "post-install:$scripts/post-install"
@@ -224,5 +229,7 @@ mkpkg tailscale "${VERSION}-r${RELEASE}" "$ARCH" \
 	"$stage/rootfs" "$stage/scripts"
 
 rm -rf "$OUT"/.build-*
+
+[ -f "$HERE/keys/yuzl1-apk.pem" ] && cp "$HERE/keys/yuzl1-apk.pem" "$OUT/"
 
 ls -l "$OUT"/*.apk
