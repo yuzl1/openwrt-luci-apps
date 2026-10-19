@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency:
+      group: gh-pages-publish
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,10 +61,15 @@ jobs:
 
       - name: Prepare feed directory
         run: |
-          mkdir -p publish
+          mkdir -p publish/23.05
           cp dist/*.ipk dist/Packages dist/Packages.gz publish/
+          cp dist/*.ipk dist/Packages dist/Packages.gz publish/23.05/
           cp feed/README.md publish/README.md
+          cp feed/README.md publish/23.05/README.md
+          cp feed/index.html publish/index.html
+          cp feed/index.html publish/23.05/index.html
           ls -l publish
+          ls -l publish/23.05
 
       - name: Build usign
         run: |
@@ -83,6 +91,7 @@ jobs:
           fi
           printf '%s\n' "$USIGN_SECRET" > /tmp/feed.sec
           usign -S -m publish/Packages -s /tmp/feed.sec -x publish/Packages.sig
+          cp publish/Packages.sig publish/23.05/Packages.sig
           rm -f /tmp/feed.sec
           for key in keys/*.pub; do
             echo "signing key: $(usign -F -p "$key") ($key)"
@@ -96,7 +105,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./publish
           publish_branch: gh-pages
-          force_orphan: true
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
