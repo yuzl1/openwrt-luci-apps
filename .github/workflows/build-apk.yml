@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency:
+      group: gh-pages-publish
+      cancel-in-progress: false
 
     steps:
       - name: Checkout
@@ -35,11 +38,19 @@ jobs:
           chmod +x build-apk.sh
           ./build-apk.sh
 
+      - name: Generate APKINDEX
+        run: |
+          cd dist-apk
+          "$APK_BIN" index -o APKINDEX.tar.gz *.apk
+          ls -l
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: openwrt-luci-apps-apk
-          path: dist-apk/*.apk
+          path: |
+            dist-apk/*.apk
+            dist-apk/APKINDEX.tar.gz
           if-no-files-found: error
 
       - name: Release
@@ -48,4 +59,22 @@ jobs:
           tag_name: apk-25.12-${{ github.run_number }}
           name: apk 25.12 build ${{ github.run_number }}
           prerelease: true
-          files: dist-apk/*.apk
+          files: |
+            dist-apk/*.apk
+            dist-apk/APKINDEX.tar.gz
+
+      - name: Publish apk feed to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git clone --depth 1 --branch gh-pages \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages
+          mkdir -p /tmp/gh-pages/25.12
+          rm -f /tmp/gh-pages/25.12/*
+          cp dist-apk/*.apk dist-apk/APKINDEX.tar.gz /tmp/gh-pages/25.12/
+          cd /tmp/gh-pages
+          git add 25.12
+          git commit -m "25.12: update apk feed" || true
+          git push origin gh-pages
