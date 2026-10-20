@@ -132,10 +132,13 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git clone --depth 1 --branch gh-pages \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages
-          mkdir -p /tmp/gh-pages/25.12
-          rm -f /tmp/gh-pages/25.12/*
-          cp dist-apk/*.apk dist-apk/APKINDEX.tar.gz dist-apk/yuzl1-apk-25.12.pem \
-            /tmp/gh-pages/25.12/
+          # apk treats a directory repository as <repo>/<arch>/APKINDEX.tar.gz.
+          rm -rf /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4
+          mkdir -p /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4
+          rm -f /tmp/gh-pages/25.12/*.apk /tmp/gh-pages/25.12/APKINDEX.tar.gz
+          cp dist-apk/*.apk dist-apk/APKINDEX.tar.gz \
+            /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4/
+          cp dist-apk/yuzl1-apk-25.12.pem /tmp/gh-pages/25.12/
           cd /tmp/gh-pages
           git add 25.12
           git commit -m "25.12: update apk feed" || true
