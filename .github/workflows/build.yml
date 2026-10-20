@@ -96,16 +96,24 @@ jobs:
 
       - name: Publish opkg feed to gh-pages
         if: github.event_name != 'pull_request'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./publish
-          publish_branch: gh-pages
-          # Only the landing page and the 23.05 feed belong to this workflow;
-          # keep the 25.12 apk feed published by the other workflow.
-          force_orphan: true
-          keep_files: |
-            25.12
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git clone --depth 1 --branch gh-pages \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages
+          # The 23.05 feed moved under /23.05; drop the old root-level copies.
+          rm -f /tmp/gh-pages/Packages /tmp/gh-pages/Packages.gz \
+                /tmp/gh-pages/Packages.sig /tmp/gh-pages/README.md \
+                /tmp/gh-pages/*.ipk
+          rm -rf /tmp/gh-pages/23.05
+          cp -f publish/index.html /tmp/gh-pages/index.html
+          cp -a publish/23.05 /tmp/gh-pages/23.05
+          cd /tmp/gh-pages
+          git add -A
+          git commit -m "Update landing page and 23.05 feed" || true
+          git push origin gh-pages
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
