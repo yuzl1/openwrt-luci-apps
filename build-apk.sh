@@ -92,35 +92,21 @@ mkpkg() {
 stage=$OUT/.build-luci-app-tailscale-community
 rm -rf "$stage"
 mkdir -p "$stage/rootfs/www" "$stage/scripts"
-cp -R "$HERE/htdocs/." "$stage/rootfs/www/"
-cp -R "$HERE/root/." "$stage/rootfs/"
+cp -R "$HERE/fork/luci-app-tailscale-community/htdocs/." "$stage/rootfs/www/"
+cp -R "$HERE/fork/luci-app-tailscale-community/root/." "$stage/rootfs/"
 find "$stage/rootfs" -type f \( -path '*/init.d/*' -o -path '*/usr/bin/*' \
 	-o -path '*/rpcd/ucode/*' \) -exec chmod 755 {} + 2>/dev/null || true
 
 cat > "$stage/scripts/post-install" <<'EOF'
 #!/bin/sh
 [ -n "$IPKG_INSTROOT" ] && exit 0
-if [ -x /etc/init.d/tailscale-settings ]; then
-	/etc/init.d/tailscale-settings enable 2>/dev/null
-	/etc/init.d/tailscale-settings restart 2>/dev/null || /etc/init.d/tailscale-settings start 2>/dev/null
-fi
 rm -f /tmp/luci-indexcache*
-exit 0
-EOF
-
-cat > "$stage/scripts/pre-deinstall" <<'EOF'
-#!/bin/sh
-[ -n "$IPKG_INSTROOT" ] && exit 0
-if [ -x /etc/init.d/tailscale-settings ]; then
-	/etc/init.d/tailscale-settings stop 2>/dev/null || true
-	/etc/init.d/tailscale-settings disable 2>/dev/null || true
-fi
 exit 0
 EOF
 chmod 755 "$stage/scripts/"*
 
 prepare_meta "$stage/rootfs" luci-app-tailscale-community
-mkpkg luci-app-tailscale-community 1.0.2-r1 noarch \
+mkpkg luci-app-tailscale-community 26.236.50544~cb5d434-r2 noarch \
 	"LuCI support for Tailscale" \
 	"tailscale ip-full luci-base rpcd-mod-ucode ucode ucode-mod-fs ucode-mod-uci ucode-mod-ubus" \
 	"$stage/rootfs" "$stage/scripts"
@@ -162,70 +148,6 @@ prepare_meta "$stage/rootfs" luci-app-ddns-lite /etc/config/ddns-lite
 mkpkg luci-app-ddns-lite 1.0.3-r1 noarch \
 	"LuCI DDNS Lite" \
 	"curl jsonfilter luci-base rpcd-mod-ucode ucode ucode-mod-fs ucode-mod-uci ucode-mod-ubus" \
-	"$stage/rootfs" "$stage/scripts"
-
-#
-# tailscale (arm_cortex-a7_neon-vfpv4)
-#
-VERSION=${TAILSCALE_VERSION:-1.104.1}
-RELEASE=${TAILSCALE_RELEASE:-3}
-SOURCE_SHA256=${TAILSCALE_SHA256:-bf868b2b1a46b9485d55bcda12c2d7573279ce4474bc6d607f42f1495db36ed8}
-ARCH=arm_cortex-a7_neon-vfpv4
-
-stage=$OUT/.build-tailscale
-source_archive=$stage/tailscale-v$VERSION.tar.gz
-source_dir=$stage/tailscale-v$VERSION
-rm -rf "$stage"
-mkdir -p "$source_dir" "$stage/rootfs/usr/sbin" "$stage/rootfs/etc/init.d" \
-	"$stage/rootfs/etc/config" "$stage/scripts"
-
-[ -f "$source_archive" ] || curl -fL --max-time 300 -o "$source_archive" \
-	"https://codeload.github.com/tailscale/tailscale/tar.gz/refs/tags/v$VERSION"
-
-[ "$(sha256_file "$source_archive")" = "$SOURCE_SHA256" ] || {
-	echo "Tailscale source checksum mismatch" >&2
-	exit 1
-}
-
-tar -xzf "$source_archive" -C "$source_dir" --strip-components=1
-
-echo "Building Tailscale $VERSION for linux/arm (GOARM=7)"
-(
-	cd "$source_dir"
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 GOTOOLCHAIN=auto \
-		go build -trimpath -buildvcs=false \
-		-tags=ts_include_cli,ts_omit_aws,ts_omit_bird,ts_omit_tap,ts_omit_kube,ts_omit_completion \
-		-ldflags "-s -w -X 'tailscale.com/version.longStamp=${VERSION}-${RELEASE} (OpenWrt)' -X 'tailscale.com/version.shortStamp=${VERSION}'" \
-		-o "$stage/rootfs/usr/sbin/tailscaled" ./cmd/tailscaled
-)
-
-ln -s tailscaled "$stage/rootfs/usr/sbin/tailscale"
-install -m 755 "$HERE/tailscale/files/tailscale.init" "$stage/rootfs/etc/init.d/tailscale"
-install -m 644 "$HERE/tailscale/files/tailscale.conf" "$stage/rootfs/etc/config/tailscale"
-
-cat > "$stage/scripts/post-install" <<'EOF'
-#!/bin/sh
-[ -n "$IPKG_INSTROOT" ] && exit 0
-mkdir -p /etc/tailscale
-chmod 700 /etc/tailscale
-/etc/init.d/tailscale enable
-/etc/init.d/tailscale restart 2>/dev/null || /etc/init.d/tailscale start
-exit 0
-EOF
-
-cat > "$stage/scripts/pre-deinstall" <<'EOF'
-#!/bin/sh
-[ -n "$IPKG_INSTROOT" ] && exit 0
-/etc/init.d/tailscale stop 2>/dev/null || true
-/etc/init.d/tailscale disable 2>/dev/null || true
-exit 0
-EOF
-chmod 755 "$stage/scripts/"*
-
-prepare_meta "$stage/rootfs" tailscale /etc/config/tailscale
-mkpkg tailscale "${VERSION}-r${RELEASE}" "$ARCH" \
-	"Tailscale static ARMv7 daemon" \
-	"ca-bundle kmod-tun" \
 	"$stage/rootfs" "$stage/scripts"
 
 rm -rf "$OUT"/.build-*

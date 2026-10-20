@@ -39,12 +39,6 @@ jobs:
             echo "APK_SIGN_KEY_25_12 is not set - building unsigned packages"
           fi
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.27.1'
-          cache: false
-
       - name: Build apk packages
         run: |
           chmod +x build-apk.sh
