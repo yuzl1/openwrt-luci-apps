@@ -27,6 +27,12 @@ jobs:
           /tmp/apk-static/sbin/apk.static --version
           echo "APK_BIN=/tmp/apk-static/sbin/apk.static" >> "$GITHUB_ENV"
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
+
       - name: Prepare apk signing key
         env:
           APK_SIGN_KEY_25_12: ${{ secrets.APK_SIGN_KEY_25_12 }}
