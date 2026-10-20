@@ -54,7 +54,7 @@ opkg install luci-app-ddns-lite luci-app-tailscale-community tailscale</pre>
 
 <h2>25.12 配置（apk）</h2>
 <pre>wget -O /etc/apk/keys/yuzl1-apk-25.12.pem https://yuzl1.github.io/openwrt-luci-apps/25.12/yuzl1-apk-25.12.pem
-echo "https://yuzl1.github.io/openwrt-luci-apps/25.12/" &gt;&gt; /etc/apk/repositories.d/customfeeds.list
+echo "https://yuzl1.github.io/openwrt-luci-apps/25.12/arm_cortex-a7_neon-vfpv4/APKINDEX.tar.gz" &gt;&gt; /etc/apk/repositories.d/customfeeds.list
 apk update
 apk add luci-app-ddns-lite luci-app-tailscale-community tailscale</pre>
 <p class="sub">先安装 <code>yuzl1-apk-25.12.pem</code> 公钥后，源索引和包都带 ECDSA P-256 签名，不需要 <code>--allow-untrusted</code>。如果暂时不想装公钥，也可以直接下载 .apk 用 <code>apk add --allow-untrusted</code> 手动安装。</p>
