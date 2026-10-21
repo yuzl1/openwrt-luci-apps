@@ -58,9 +58,18 @@ jobs:
           # index too so clients do not need --allow-untrusted.
           if [ -n "$APK_SIGN_KEY_FILE" ]; then
             "$APK_BIN" mkndx --allow-untrusted --sign-key "$APK_SIGN_KEY_FILE" \
-              -o APKINDEX.tar.gz *.apk
+              -o APKINDEX-arm_cortex-a7_neon-vfpv4.tar.gz \
+              luci-app-*.apk tailscale-*-arm_cortex-a7_neon-vfpv4.apk
+            "$APK_BIN" mkndx --allow-untrusted --sign-key "$APK_SIGN_KEY_FILE" \
+              -o APKINDEX-mipsel_24kc.tar.gz \
+              luci-app-*.apk tailscale-*-mipsel_24kc.apk
           else
-            "$APK_BIN" mkndx --allow-untrusted -o APKINDEX.tar.gz *.apk
+            "$APK_BIN" mkndx --allow-untrusted \
+              -o APKINDEX-arm_cortex-a7_neon-vfpv4.tar.gz \
+              luci-app-*.apk tailscale-*-arm_cortex-a7_neon-vfpv4.apk
+            "$APK_BIN" mkndx --allow-untrusted \
+              -o APKINDEX-mipsel_24kc.tar.gz \
+              luci-app-*.apk tailscale-*-mipsel_24kc.apk
           fi
           ls -l
 
@@ -70,7 +79,7 @@ jobs:
           name: openwrt-luci-apps-apk
           path: |
             dist-apk/*.apk
-            dist-apk/APKINDEX.tar.gz
+            dist-apk/APKINDEX-*.tar.gz
             dist-apk/yuzl1-apk-25.12.pem
           if-no-files-found: error
 
@@ -82,7 +91,7 @@ jobs:
           prerelease: true
           files: |
             dist-apk/*.apk
-            dist-apk/APKINDEX.tar.gz
+            dist-apk/APKINDEX-*.tar.gz
             dist-apk/yuzl1-apk-25.12.pem
 
       - name: Clean old apk releases
@@ -133,11 +142,21 @@ jobs:
           git clone --depth 1 --branch gh-pages \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages
           # apk treats a directory repository as <repo>/<arch>/APKINDEX.tar.gz.
-          rm -rf /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4
-          mkdir -p /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4
+          rm -rf /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4 \
+                 /tmp/gh-pages/25.12/mipsel_24kc
+          mkdir -p /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4 \
+                   /tmp/gh-pages/25.12/mipsel_24kc
           rm -f /tmp/gh-pages/25.12/*.apk /tmp/gh-pages/25.12/APKINDEX.tar.gz
-          cp dist-apk/*.apk dist-apk/APKINDEX.tar.gz \
+          cp dist-apk/luci-app-*.apk \
+            dist-apk/tailscale-*-arm_cortex-a7_neon-vfpv4.apk \
             /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4/
+          cp dist-apk/APKINDEX-arm_cortex-a7_neon-vfpv4.tar.gz \
+            /tmp/gh-pages/25.12/arm_cortex-a7_neon-vfpv4/APKINDEX.tar.gz
+          cp dist-apk/luci-app-*.apk \
+            dist-apk/tailscale-*-mipsel_24kc.apk \
+            /tmp/gh-pages/25.12/mipsel_24kc/
+          cp dist-apk/APKINDEX-mipsel_24kc.tar.gz \
+            /tmp/gh-pages/25.12/mipsel_24kc/APKINDEX.tar.gz
           cp dist-apk/yuzl1-apk-25.12.pem /tmp/gh-pages/25.12/
           cd /tmp/gh-pages
           git add 25.12

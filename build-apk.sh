@@ -60,6 +60,7 @@ mkpkg() {
 	deps=$5
 	rootfs=$6
 	scripts=$7
+	out=${8:-$OUT/${pkg}-${ver}.apk}
 
 	set -- "$APK_BIN" mkpkg \
 		--info "name:$pkg" \
@@ -72,7 +73,7 @@ mkpkg() {
 		--info "maintainer:yuzl1" \
 		--info "depends:$deps" \
 		--files "$rootfs" \
-		--output "$OUT/${pkg}-${ver}.apk"
+		--output "$out"
 
 	if [ -n "$SIGN_KEY" ] && [ -f "$SIGN_KEY" ]; then
 		set -- "$@" --sign-key "$SIGN_KEY"
@@ -151,45 +152,56 @@ mkpkg luci-app-ddns-lite 1.0.3-r1 noarch \
 	"$stage/rootfs" "$stage/scripts"
 
 #
-# tailscale (arm_cortex-a7_neon-vfpv4)
+# tailscale (arm_cortex-a7_neon-vfpv4 and mipsel_24kc)
 #
 VERSION=${TAILSCALE_VERSION:-1.104.1}
 RELEASE=${TAILSCALE_RELEASE:-3}
 SOURCE_SHA256=${TAILSCALE_SHA256:-bf868b2b1a46b9485d55bcda12c2d7573279ce4474bc6d607f42f1495db36ed8}
-ARCH=arm_cortex-a7_neon-vfpv4
 
-stage=$OUT/.build-tailscale
-source_archive=$stage/tailscale-v$VERSION.tar.gz
-source_dir=$stage/tailscale-v$VERSION
-rm -rf "$stage"
-mkdir -p "$source_dir" "$stage/rootfs/usr/sbin" "$stage/rootfs/etc/init.d" \
-	"$stage/rootfs/etc/config" "$stage/scripts"
+TAILSCALE_SRC=$OUT/.build-tailscale-src
+TAILSCALE_ARCHIVE=$TAILSCALE_SRC/tailscale-v$VERSION.tar.gz
+TAILSCALE_DIR=$TAILSCALE_SRC/tailscale-v$VERSION
+mkdir -p "$TAILSCALE_SRC"
 
-[ -f "$source_archive" ] || curl -fL --max-time 300 -o "$source_archive" \
+[ -f "$TAILSCALE_ARCHIVE" ] || curl -fL --max-time 300 -o "$TAILSCALE_ARCHIVE" \
 	"https://codeload.github.com/tailscale/tailscale/tar.gz/refs/tags/v$VERSION"
 
-[ "$(sha256_file "$source_archive")" = "$SOURCE_SHA256" ] || {
+[ "$(sha256_file "$TAILSCALE_ARCHIVE")" = "$SOURCE_SHA256" ] || {
 	echo "Tailscale source checksum mismatch" >&2
 	exit 1
 }
 
-tar -xzf "$source_archive" -C "$source_dir" --strip-components=1
+if [ ! -d "$TAILSCALE_DIR" ]; then
+	mkdir -p "$TAILSCALE_DIR"
+	tar -xzf "$TAILSCALE_ARCHIVE" -C "$TAILSCALE_DIR" --strip-components=1
+fi
 
-echo "Building Tailscale $VERSION for linux/arm (GOARM=7)"
-(
-	cd "$source_dir"
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 GOTOOLCHAIN=auto \
-		go build -trimpath -buildvcs=false \
-		-tags=ts_include_cli,ts_omit_aws,ts_omit_bird,ts_omit_tap,ts_omit_kube,ts_omit_completion \
-		-ldflags "-s -w -X 'tailscale.com/version.longStamp=${VERSION}-${RELEASE} (OpenWrt)' -X 'tailscale.com/version.shortStamp=${VERSION}'" \
-		-o "$stage/rootfs/usr/sbin/tailscaled" ./cmd/tailscaled
-)
+build_tailscale() {
+	arch=$1
+	goarch=$2
+	goarm=$3
+	gomips=$4
 
-ln -s tailscaled "$stage/rootfs/usr/sbin/tailscale"
-install -m 755 "$HERE/tailscale/files/tailscale.init" "$stage/rootfs/etc/init.d/tailscale"
-install -m 644 "$HERE/tailscale/files/tailscale.conf" "$stage/rootfs/etc/config/tailscale"
+	stage=$OUT/.build-tailscale-$arch
+	rm -rf "$stage"
+	mkdir -p "$stage/rootfs/usr/sbin" "$stage/rootfs/etc/init.d" \
+		"$stage/rootfs/etc/config" "$stage/scripts"
 
-cat > "$stage/scripts/post-install" <<'EOF'
+	echo "Building Tailscale $VERSION for linux/$goarch ($arch)"
+	(
+		cd "$TAILSCALE_DIR"
+		CGO_ENABLED=0 GOOS=linux GOARCH=$goarch GOARM=$goarm GOMIPS=$gomips GOTOOLCHAIN=auto \
+			go build -trimpath -buildvcs=false \
+			-tags=ts_include_cli,ts_omit_aws,ts_omit_bird,ts_omit_tap,ts_omit_kube,ts_omit_completion \
+			-ldflags "-s -w -X 'tailscale.com/version.longStamp=${VERSION}-${RELEASE} (OpenWrt)' -X 'tailscale.com/version.shortStamp=${VERSION}'" \
+			-o "$stage/rootfs/usr/sbin/tailscaled" ./cmd/tailscaled
+	)
+
+	ln -s tailscaled "$stage/rootfs/usr/sbin/tailscale"
+	install -m 755 "$HERE/tailscale/files/tailscale.init" "$stage/rootfs/etc/init.d/tailscale"
+	install -m 644 "$HERE/tailscale/files/tailscale.conf" "$stage/rootfs/etc/config/tailscale"
+
+	cat > "$stage/scripts/post-install" <<'EOF'
 #!/bin/sh
 [ -n "$IPKG_INSTROOT" ] && exit 0
 mkdir -p /etc/tailscale
@@ -199,20 +211,25 @@ chmod 700 /etc/tailscale
 exit 0
 EOF
 
-cat > "$stage/scripts/pre-deinstall" <<'EOF'
+	cat > "$stage/scripts/pre-deinstall" <<'EOF'
 #!/bin/sh
 [ -n "$IPKG_INSTROOT" ] && exit 0
 /etc/init.d/tailscale stop 2>/dev/null || true
 /etc/init.d/tailscale disable 2>/dev/null || true
 exit 0
 EOF
-chmod 755 "$stage/scripts/"*
+	chmod 755 "$stage/scripts/"*
 
-prepare_meta "$stage/rootfs" tailscale /etc/config/tailscale
-mkpkg tailscale "${VERSION}-r${RELEASE}" "$ARCH" \
-	"Tailscale static ARMv7 daemon" \
-	"ca-bundle kmod-tun" \
-	"$stage/rootfs" "$stage/scripts"
+	prepare_meta "$stage/rootfs" tailscale /etc/config/tailscale
+	mkpkg tailscale "${VERSION}-r${RELEASE}" "$arch" \
+		"Tailscale static daemon for $arch" \
+		"ca-bundle kmod-tun" \
+		"$stage/rootfs" "$stage/scripts" \
+		"$OUT/tailscale-${VERSION}-r${RELEASE}-${arch}.apk"
+}
+
+build_tailscale arm_cortex-a7_neon-vfpv4 arm 7 ""
+build_tailscale mipsel_24kc mipsle "" softfloat
 
 rm -rf "$OUT"/.build-*
 
